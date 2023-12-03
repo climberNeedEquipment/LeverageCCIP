@@ -1,27 +1,17 @@
-# CCIP Cross Chain NFT
+# LEVER-EZ: Empowering Degens in Multichain DeFi
 
-> **Note**
->
-> _This repository represents an example of using a Chainlink product or service. It is provided to help you understand how to interact with Chainlink’s systems so that you can integrate them into your own. This template is provided "AS IS" without warranties of any kind, has not been audited, and may be missing key checks or error handling to make the usage of the product more clear. Take everything in this repository as an example and not something to be copy pasted into a production ready service._
+## Overview
 
-This project demonstrates how to mint an NFT on one blockchain from another blockchain using Chainlink CCIP.
+In the dynamic realm of decentralized finance (DeFi), the quest for alpha yields across multiple blockchains has never been more challenging and rewarding. Enter LEVER-EZ, a pioneering project tailored for decentralized enthusiasts, affectionately known as "degens." In the ever-expanding DeFi landscape, degens navigate diverse chains, seeking opportunities in Decentralized Exchanges (DEXs), Lending Protocols, and Blockchains. LEVER-EZ is designed to empower these degens by providing an automated solution for flashloan looping, optimizing gas consumption and unlocking the potential for alpha yields within limited budgets.
+
+## Target Audience
+
+LEVER-EZ is crafted for degens who actively pursue airdrop opportunities and yield farming strategies. In the midst of bullish market conditions, these degens are strategically positioned to leverage their assets effectively, identifying hidden opportunities and maximizing returns.
 
 ## Prerequisites
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Current LTS Node.js version](https://nodejs.org/en/about/releases/)
-
-Verify installation by typing:
-
-```shell
-node -v
-```
-
-and
-
-```shell
-npm -v
-```
 
 ## Getting Started
 
@@ -37,54 +27,40 @@ npm install
 npx hardhat compile
 ```
 
-## What is Chainlink CCIP?
+## Key Features
 
-**Chainlink Cross-Chain Interoperability Protocol (CCIP)** provides a single, simple, and elegant interface through which dApps and web3 entrepreneurs can securely meet all their cross-chain needs, including token transfers and arbitrary messaging.
+LEVER-EZ offers a comprehensive suite of features, including:
 
-![basic-architecture](./img/basic-architecture.png)
+- **Flashloan Looping:** Automated and optimized for gas consumption, allowing degens to navigate the DeFi landscape efficiently.
+- **Collateral Status Insights:** Provides a real-time view of collateral statuses across various DeFi lending protocols.
+- **On-Chain Valuations:** Utilizes Chainlink Data to present on-chain valuations of assets within each blockchain.
+- **Black Swan Event Management:** Enables users to swiftly close all positions across multiple chains in unforeseen events, mitigating risks effectively.
 
-With Chainlink CCIP, one can:
+## Functionality
 
-- Transfer supported tokens
-- Send messages (any data)
-- Send messages and tokens
+The LEVER-EZ project serves as a practical guide, showcasing how users can interact with leading lending protocols such as Compound V2, Aave V2, and Aave V3. Users can seamlessly leverage, deleverage, supply, withdraw, and manage their assets, ensuring a strategic approach to decentralized finance.
 
-CCIP receiver can be:
+## Chainlink CCIP Integration
 
-- Smart contract that implements `CCIPReceiver.sol`
-- EOA
+At the heart of LEVER-EZ is the **Chainlink Cross-Chain Interoperability Protocol (CCIP)**, a powerful tool facilitating seamless communication across diverse blockchains.
 
-**Note**: If you send a message and token(s) to EOA, only tokens will arrive
+![Basic Architecture](./img/basic-architecture.png)
 
-To use this project, you can consider CCIP as a "black-box" component and be aware of the Router contract only. If you want to dive deep into it, check the [Official Chainlink Documentation](https://docs.chain.link/ccip).
+In critical scenarios, mirroring the urgency seen in traditional markets, users can leverage functionalities similar to "close all positions" buttons found in centralized exchange derivatives/margin markets.
 
-## What are we building?
+![LEVER-EZ Close All](./img/lever_ez_close_all.png)
 
-Imagine that you want to go to a conference that sells tickets as NFTs on one chain, but you have funds on some other chain. You will need to bridge your tokens to that chain where the NFT contract exists, to mint the NFT, and optionally bridge funds back.
+The Leverager contract within LEVER-EZ inherits both CCIP and CCIP receiver contracts. With Chainlink CCIP integration, users gain unparalleled capabilities:
 
-We are building the cross-chain NFT minting system. This project aims to mint an NFT on the destination blockchain by sending the `to` address from the source blockchain. It is extremely simple so we can understand the basic concepts, but you can expand it to accept payment for minting on the source blockchain, add extra features, etc.
-
-The basic architecture diagram of what we want to accomplish looks like this:
-
-```mermaid
-flowchart LR
-subgraph "Source Blockchain"
-a("SourceMinter.sol") -- "`send abi.encodeWithSignature('mint(address)', msg.sender);`" --> b("Source Router")
-end
-
-b("Source Router") --> c("CCIP")
-
-c("CCIP") --> d("Destination Router")
-
-subgraph "Destination Blockchain"
-d("Destination Router") -- "`receive abi.encodeWithSignature('mint(address)', msg.sender);`" --> e("DestinationMinter.sol")
-e("DestinationMinter.sol") -- "`call mint(to)`" --> f("MyNFT.sol")
-end
-```
+- **Supply and Borrow:** Swiftly supply and borrow tokens within lending protocols.
+- **Leveraged Yielding Positions:** Open positions combining supply and borrow operations for optimized yields.
+- **Token Management:** Seamlessly withdraw or borrow tokens as per strategic requirements.
+- **Position Closure:** Close leveraged yielding positions partially or entirely, managing risk dynamically.
+- **Multichain Position Closure:** Execute a single transaction to close all positions across multichain lending protocols in the same address.
 
 ## Usage
 
-There are several Hardhat tasks available for deployment and interaction with this project. But before that, you need to set up some environment variables.
+We modified the example repository from Chainlink [`ccip-cross-chain-nft`](https://github.com/smartcontractkit/ccip-cross-chain-nft/tree/main). and remained the basic usage docs.
 
 We are going to use the [`@chainlink/env-enc`](https://www.npmjs.com/package/@chainlink/env-enc) package for extra security. It encrypts sensitive data instead of storing them as plain text in the `.env` file, by creating a new, `.env.enc` file. Although it's not recommended to push this file online, if that accidentally happens your secrets will still be encrypted.
 
@@ -120,20 +96,20 @@ npx env-enc view
 
 ### Deployment
 
-1. Deploy the [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) and [`DestinationMinter.sol`](./contracts/cross-chain-nft-minter/DestinationMinter.sol) smart contracts to the **destination blockchain**, by running the `deploy-destination-minter` task:
+1. Deploy the [`Leverager.sol`](./contracts/Leverager.sol) smart contracts to the **all target blockchains**, by running the `deploy-leverager` task:
 
 ```shell
-npx hardhat deploy-destination-minter
+npx hardhat deploy-leverager
 --router <routerAddress> # Optional
 ```
 
-For example, if you want to mint NFTs on avalancheFuji, run:
+For example, if you want to mint Leverager on avalancheFuji, run:
 
 ```shell
-npx hardhat deploy-destination-minter --network avalancheFuji
+npx hardhat deploy-leverager --network avalancheFuji
 ```
 
-2. Deploy the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract to the **source blockchain**, by running the `deploy-source-minter` task:
+2. Deploy the [`LeverageViewer.sol`](./contracts/cross-chain-nft-minter/DestinationMinter.sol) smart contract to the **source blockchain**, by running the `deploy-source-minter` task:
 
 ```shell
 npx hardhat deploy-source-minter
@@ -149,7 +125,7 @@ npx hardhat deploy-source-minter --network ethereumSepolia
 
 ### Fee Management
 
-3. Fund the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract with tokens for CCIP fees.
+3. Fund the [`Leverager.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract with tokens for CCIP fees.
 
 - If you want to pay for CCIP fees in Native tokens:
 

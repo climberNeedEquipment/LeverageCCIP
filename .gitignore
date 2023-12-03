@@ -1,5 +1,6 @@
 node_modules
 .env
+.env.enc
 coverage
 coverage.json
 
@@ -7,3 +8,4 @@ coverage.json
 cache
 /artifacts
 
+typechain
