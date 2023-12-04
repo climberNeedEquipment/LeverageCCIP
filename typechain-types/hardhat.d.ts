@@ -30,26 +30,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Client__factory>;
     getContractFactory(
-      name: "ConfirmedOwner",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ConfirmedOwner__factory>;
-    getContractFactory(
-      name: "ConfirmedOwnerWithProposal",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ConfirmedOwnerWithProposal__factory>;
-    getContractFactory(
-      name: "OwnableInterface",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OwnableInterface__factory>;
-    getContractFactory(
-      name: "OwnerIsCreator",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OwnerIsCreator__factory>;
-    getContractFactory(
-      name: "IERC20",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC20__factory>;
-    getContractFactory(
       name: "IERC165",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC165__factory>;
@@ -90,33 +70,21 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC20__factory>;
     getContractFactory(
-      name: "ERC721",
+      name: "CCIPReceiver",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC721__factory>;
+    ): Promise<Contracts.CCIPReceiver__factory>;
     getContractFactory(
-      name: "ERC721URIStorage",
+      name: "Create2DeployerLocal",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC721URIStorage__factory>;
+    ): Promise<Contracts.Create2DeployerLocal__factory>;
     getContractFactory(
-      name: "IERC721Metadata",
+      name: "Multicall3",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC721Metadata__factory>;
+    ): Promise<Contracts.Multicall3__factory>;
     getContractFactory(
-      name: "IERC721",
+      name: "Ownable",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC721__factory>;
-    getContractFactory(
-      name: "IERC721Receiver",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC721Receiver__factory>;
-    getContractFactory(
-      name: "ERC165",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC165__factory>;
-    getContractFactory(
-      name: "IERC165",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC165__factory>;
+    ): Promise<Contracts.Ownable__factory>;
     getContractFactory(
       name: "DefaultReserveInterestRateStrategy",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -273,6 +241,26 @@ declare module "hardhat/types/runtime" {
       name: "Propagator",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Propagator__factory>;
+    getContractFactory(
+      name: "Create2Deployer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Create2Deployer__factory>;
+    getContractFactory(
+      name: "ERC1820Implementer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC1820Implementer__factory>;
+    getContractFactory(
+      name: "IERC1820Implementer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC1820Implementer__factory>;
+    getContractFactory(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Ownable__factory>;
+    getContractFactory(
+      name: "Pausable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Pausable__factory>;
 
     getContractAt(
       name: "CCIPReceiver",
@@ -294,31 +282,6 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.Client>;
-    getContractAt(
-      name: "ConfirmedOwner",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ConfirmedOwner>;
-    getContractAt(
-      name: "ConfirmedOwnerWithProposal",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ConfirmedOwnerWithProposal>;
-    getContractAt(
-      name: "OwnableInterface",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.OwnableInterface>;
-    getContractAt(
-      name: "OwnerIsCreator",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.OwnerIsCreator>;
-    getContractAt(
-      name: "IERC20",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IERC20>;
     getContractAt(
       name: "IERC165",
       address: string | ethers.Addressable,
@@ -370,40 +333,25 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IERC20>;
     getContractAt(
-      name: "ERC721",
+      name: "CCIPReceiver",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.ERC721>;
+    ): Promise<Contracts.CCIPReceiver>;
     getContractAt(
-      name: "ERC721URIStorage",
+      name: "Create2DeployerLocal",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.ERC721URIStorage>;
+    ): Promise<Contracts.Create2DeployerLocal>;
     getContractAt(
-      name: "IERC721Metadata",
+      name: "Multicall3",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.IERC721Metadata>;
+    ): Promise<Contracts.Multicall3>;
     getContractAt(
-      name: "IERC721",
+      name: "Ownable",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.IERC721>;
-    getContractAt(
-      name: "IERC721Receiver",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IERC721Receiver>;
-    getContractAt(
-      name: "ERC165",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ERC165>;
-    getContractAt(
-      name: "IERC165",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IERC165>;
+    ): Promise<Contracts.Ownable>;
     getContractAt(
       name: "DefaultReserveInterestRateStrategy",
       address: string | ethers.Addressable,
@@ -599,6 +547,31 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.Propagator>;
+    getContractAt(
+      name: "Create2Deployer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Create2Deployer>;
+    getContractAt(
+      name: "ERC1820Implementer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC1820Implementer>;
+    getContractAt(
+      name: "IERC1820Implementer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC1820Implementer>;
+    getContractAt(
+      name: "Ownable",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Ownable>;
+    getContractAt(
+      name: "Pausable",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Pausable>;
 
     deployContract(
       name: "CCIPReceiver",
@@ -616,26 +589,6 @@ declare module "hardhat/types/runtime" {
       name: "Client",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Client>;
-    deployContract(
-      name: "ConfirmedOwner",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ConfirmedOwner>;
-    deployContract(
-      name: "ConfirmedOwnerWithProposal",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ConfirmedOwnerWithProposal>;
-    deployContract(
-      name: "OwnableInterface",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OwnableInterface>;
-    deployContract(
-      name: "OwnerIsCreator",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OwnerIsCreator>;
-    deployContract(
-      name: "IERC20",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC20>;
     deployContract(
       name: "IERC165",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -677,33 +630,21 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC20>;
     deployContract(
-      name: "ERC721",
+      name: "CCIPReceiver",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ERC721>;
+    ): Promise<Contracts.CCIPReceiver>;
     deployContract(
-      name: "ERC721URIStorage",
+      name: "Create2DeployerLocal",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ERC721URIStorage>;
+    ): Promise<Contracts.Create2DeployerLocal>;
     deployContract(
-      name: "IERC721Metadata",
+      name: "Multicall3",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC721Metadata>;
+    ): Promise<Contracts.Multicall3>;
     deployContract(
-      name: "IERC721",
+      name: "Ownable",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC721>;
-    deployContract(
-      name: "IERC721Receiver",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC721Receiver>;
-    deployContract(
-      name: "ERC165",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ERC165>;
-    deployContract(
-      name: "IERC165",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC165>;
+    ): Promise<Contracts.Ownable>;
     deployContract(
       name: "DefaultReserveInterestRateStrategy",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -860,6 +801,26 @@ declare module "hardhat/types/runtime" {
       name: "Propagator",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Propagator>;
+    deployContract(
+      name: "Create2Deployer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Create2Deployer>;
+    deployContract(
+      name: "ERC1820Implementer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC1820Implementer>;
+    deployContract(
+      name: "IERC1820Implementer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1820Implementer>;
+    deployContract(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "Pausable",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Pausable>;
 
     deployContract(
       name: "CCIPReceiver",
@@ -881,31 +842,6 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Client>;
-    deployContract(
-      name: "ConfirmedOwner",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ConfirmedOwner>;
-    deployContract(
-      name: "ConfirmedOwnerWithProposal",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ConfirmedOwnerWithProposal>;
-    deployContract(
-      name: "OwnableInterface",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OwnableInterface>;
-    deployContract(
-      name: "OwnerIsCreator",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OwnerIsCreator>;
-    deployContract(
-      name: "IERC20",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC20>;
     deployContract(
       name: "IERC165",
       args: any[],
@@ -957,40 +893,25 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC20>;
     deployContract(
-      name: "ERC721",
+      name: "CCIPReceiver",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ERC721>;
+    ): Promise<Contracts.CCIPReceiver>;
     deployContract(
-      name: "ERC721URIStorage",
+      name: "Create2DeployerLocal",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ERC721URIStorage>;
+    ): Promise<Contracts.Create2DeployerLocal>;
     deployContract(
-      name: "IERC721Metadata",
+      name: "Multicall3",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC721Metadata>;
+    ): Promise<Contracts.Multicall3>;
     deployContract(
-      name: "IERC721",
+      name: "Ownable",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC721>;
-    deployContract(
-      name: "IERC721Receiver",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC721Receiver>;
-    deployContract(
-      name: "ERC165",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ERC165>;
-    deployContract(
-      name: "IERC165",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC165>;
+    ): Promise<Contracts.Ownable>;
     deployContract(
       name: "DefaultReserveInterestRateStrategy",
       args: any[],
@@ -1186,6 +1107,31 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Propagator>;
+    deployContract(
+      name: "Create2Deployer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Create2Deployer>;
+    deployContract(
+      name: "ERC1820Implementer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC1820Implementer>;
+    deployContract(
+      name: "IERC1820Implementer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC1820Implementer>;
+    deployContract(
+      name: "Ownable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "Pausable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Pausable>;
 
     // default types
     getContractFactory(

@@ -4,6 +4,8 @@ import "xdeployer";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "./tasks";
+import "hardhat-tracer";
+import "hardhat-contract-sizer";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const ETHEREUM_SEPOLIA_RPC_URL = process.env.ETHEREUM_SEPOLIA_RPC_URL;
@@ -51,6 +53,15 @@ const config: HardhatUserConfig = {
       accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
       chainId: 43113,
     },
+  },
+
+  // @ts-ignore
+  contractSizer: {
+    runOnCompile: true,
+  },
+  mocha: {
+    timeout: 40000000,
+    require: ["hardhat/register"],
   },
 
   xdeploy: {

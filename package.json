@@ -9,10 +9,11 @@
     "ethers": "^6.8.1",
     "hardhat": "^2.14.1",
     "hardhat-contract-sizer": "^2.10.0",
-    "hardhat-tracer": "^2.6.0",
+    "hardhat-tracer": "^2.7.0",
     "xdeployer": "^2.2.0"
   },
   "scripts": {
-    "typechain": "typechain --target ethers-v6 'artifacts/contracts/*.sol/!(*.dbg).json' --out-dir typechain"
+    "compile": "hardhat compile",
+    "typechain": "typechain --target ethers-v6 'artifacts/contracts/**/!(*.dbg).json' --out-dir typechain"
   }
 }

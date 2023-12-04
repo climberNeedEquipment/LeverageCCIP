@@ -84,12 +84,7 @@ export declare namespace Client {
 export interface LeveragerInterface extends Interface {
   getFunction(
     nameOrSignature:
-      | "DELEVERAGE"
-      | "LEVERAGE"
-      | "LEVERAGE_PRECISION"
       | "WETH9"
-      | "allowlistedDestinationChains"
-      | "allowlistedSourceChains"
       | "borrow"
       | "ccipReceive"
       | "close"
@@ -117,24 +112,7 @@ export interface LeveragerInterface extends Interface {
       | "Withdraw"
   ): EventFragment;
 
-  encodeFunctionData(
-    functionFragment: "DELEVERAGE",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "LEVERAGE", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "LEVERAGE_PRECISION",
-    values?: undefined
-  ): string;
   encodeFunctionData(functionFragment: "WETH9", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "allowlistedDestinationChains",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "allowlistedSourceChains",
-    values: [BigNumberish]
-  ): string;
   encodeFunctionData(
     functionFragment: "borrow",
     values: [ILeverager.InputParamsStruct]
@@ -186,21 +164,7 @@ export interface LeveragerInterface extends Interface {
     values: [ILeverager.InputParamsStruct]
   ): string;
 
-  decodeFunctionResult(functionFragment: "DELEVERAGE", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "LEVERAGE", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "LEVERAGE_PRECISION",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "WETH9", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "allowlistedDestinationChains",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "allowlistedSourceChains",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "borrow", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "ccipReceive",
@@ -427,25 +391,7 @@ export interface Leverager extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  DELEVERAGE: TypedContractMethod<[], [bigint], "view">;
-
-  LEVERAGE: TypedContractMethod<[], [bigint], "view">;
-
-  LEVERAGE_PRECISION: TypedContractMethod<[], [bigint], "view">;
-
   WETH9: TypedContractMethod<[], [string], "view">;
-
-  allowlistedDestinationChains: TypedContractMethod<
-    [arg0: BigNumberish],
-    [boolean],
-    "view"
-  >;
-
-  allowlistedSourceChains: TypedContractMethod<
-    [arg0: BigNumberish],
-    [boolean],
-    "view"
-  >;
 
   borrow: TypedContractMethod<
     [inputParams: ILeverager.InputParamsStruct],
@@ -518,23 +464,8 @@ export interface Leverager extends BaseContract {
   ): T;
 
   getFunction(
-    nameOrSignature: "DELEVERAGE"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "LEVERAGE"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "LEVERAGE_PRECISION"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
     nameOrSignature: "WETH9"
   ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "allowlistedDestinationChains"
-  ): TypedContractMethod<[arg0: BigNumberish], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "allowlistedSourceChains"
-  ): TypedContractMethod<[arg0: BigNumberish], [boolean], "view">;
   getFunction(
     nameOrSignature: "borrow"
   ): TypedContractMethod<

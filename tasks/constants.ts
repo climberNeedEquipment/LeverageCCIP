@@ -1,13 +1,35 @@
+export const MAX_UINT256 =
+  "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+export const ETH_EE_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
 export type AddressMap = { [blockchain: string]: string };
 export type TokenAmounts = { token: string; amount: string };
-
+export const LeveragerAddress: string =
+  "0x48c3a574662f64cae309E6087c29c0f7D63EF560";
+export type TokenUnderlyingAddressMap = {
+  [blockchain: string]: {
+    DAI: string;
+    USDC: string;
+    USDT: string;
+    WETH: string;
+    WBTC: string;
+  };
+};
 export type LendingMap = {
   [blockchain: string]: {
     CompoundV2Comptroller?: string;
     AaveV2LendingPool?: string;
     AaveV2IncentivesController?: string;
-    AaveV3LendingPool?: string;
+    AaveV3LendingPool: string;
     AaveV3IncentivesController?: string;
+  };
+};
+export type RouterMap = {
+  [blockchain: string]: {
+    address: string;
+    chainSelector: string;
+    feeTokens: string[];
   };
 };
 
@@ -15,6 +37,10 @@ export enum PayFeesIn {
   Native,
   LINK,
 }
+export const create2DeployerAddress: string =
+  "0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2";
+export const multicall3Address: string =
+  "0xcA11bde05977b3631167028862bE2a173976CA112";
 
 export const supportedNetworks = [
   `ethereumSepolia`,
@@ -38,7 +64,7 @@ export const WETH_ADDRESSES: AddressMap = {
   [`avalancheFuji`]: `0xd00ae08403B9bbb9124bB305C09058E32C39A48c`,
 };
 
-export const LENDING_POOLS = {
+export const LENDING_POOLS: LendingMap = {
   [`ethereumSepolia`]: {
     CompoundV2Comptroller: "0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b",
     AaveV3LendingPool: "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
@@ -61,7 +87,7 @@ export const LENDING_POOLS = {
   },
 };
 
-export const MINTABLE_ERC20_TOKENS = {
+export const MINTABLE_ERC20_TOKENS: TokenUnderlyingAddressMap = {
   [`ethereumSepolia`]: {
     DAI: "0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357",
     USDC: "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",
@@ -85,55 +111,55 @@ export const MINTABLE_ERC20_TOKENS = {
   },
 };
 
-export const AAVE_V3_A_TOKENS = {
+export const AAVE_V3_A_TOKENS: TokenUnderlyingAddressMap = {
   [`ethereumSepolia`]: {
-    aDAI: "0x29598b72eb5CeBd806C5dCD549490FdA35B13cD8",
-    aUSDC: "0x16dA4541aD1807f4443d92D26044C1147406EB80",
-    aUSDT: "0xAF0F6e8b0Dc5c913bbF4d14c22B4E78Dd14310B6",
-    aWETH: "0x5b071b590a59395fE4025A0Ccc1FcC931AAc1830",
-    aWBTC: "0x1804Bf30507dc2EB3bDEbbbdd859991EAeF6EefF",
+    DAI: "0x29598b72eb5CeBd806C5dCD549490FdA35B13cD8",
+    USDC: "0x16dA4541aD1807f4443d92D26044C1147406EB80",
+    USDT: "0xAF0F6e8b0Dc5c913bbF4d14c22B4E78Dd14310B6",
+    WETH: "0x5b071b590a59395fE4025A0Ccc1FcC931AAc1830",
+    WBTC: "0x1804Bf30507dc2EB3bDEbbbdd859991EAeF6EefF",
   },
   [`polygonMumbai`]: {
-    aDAI: "0x8903bbBD684B7ef734c01BEb00273Ff52703514F",
-    aUSDC: "0x4086fabeE92a080002eeBA1220B9025a27a40A49",
-    aUSDT: "0x5F3a71D07E95C1E54B9Cc055D418a219586A3473",
-    aWETH: "0xAba444af64ad33A6d8575b8A353226997d6A126a",
-    aWBTC: "0xdA67e6C1171D4f0D522Db7f127B88405eA1535d4",
+    DAI: "0x8903bbBD684B7ef734c01BEb00273Ff52703514F",
+    USDC: "0x4086fabeE92a080002eeBA1220B9025a27a40A49",
+    USDT: "0x5F3a71D07E95C1E54B9Cc055D418a219586A3473",
+    WETH: "0xAba444af64ad33A6d8575b8A353226997d6A126a",
+    WBTC: "0xdA67e6C1171D4f0D522Db7f127B88405eA1535d4",
   },
   [`avalancheFuji`]: {
-    aDAI: "0xc2E0542ae75DF6ceC02fea12972918a5D18Eb956",
-    aUSDC: "0xb1c85310a1b809C70fA6806d27Da425C1261F801",
-    aUSDT: "0x13f2B2AFCbe58e72b3d275aC197c3f602CC57735",
-    aWETH: "0x812664237ad3DfdaA697B77b7919bBde7486D90E",
-    aWBTC: "0x3d1F7da320eFDE834Cb7974d68591ca65de92FDC",
+    DAI: "0xc2E0542ae75DF6ceC02fea12972918a5D18Eb956",
+    USDC: "0xb1c85310a1b809C70fA6806d27Da425C1261F801",
+    USDT: "0x13f2B2AFCbe58e72b3d275aC197c3f602CC57735",
+    WETH: "0x812664237ad3DfdaA697B77b7919bBde7486D90E",
+    WBTC: "0x3d1F7da320eFDE834Cb7974d68591ca65de92FDC",
   },
 };
 
-export const AAVE_V3_DEBT_TOKENS = {
+export const AAVE_V3_DEBT_TOKENS: TokenUnderlyingAddressMap = {
   [`ethereumSepolia`]: {
-    vDAI: "0x22675C506A8FC26447aFFfa33640f6af5d4D4cF0",
-    vUSDC: "0x36B5dE936eF1710E1d22EabE5231b28581a92ECc",
-    vUSDT: "0x9844386d29EEd970B9F6a2B9a676083b0478210e",
-    vWETH: "0x22a35DB253f4F6D0029025D6312A3BdAb20C2c6A",
-    vWBTC: "0xEB016dFd303F19fbDdFb6300eB4AeB2DA7Ceac37",
+    DAI: "0x22675C506A8FC26447aFFfa33640f6af5d4D4cF0",
+    USDC: "0x36B5dE936eF1710E1d22EabE5231b28581a92ECc",
+    USDT: "0x9844386d29EEd970B9F6a2B9a676083b0478210e",
+    WETH: "0x22a35DB253f4F6D0029025D6312A3BdAb20C2c6A",
+    WBTC: "0xEB016dFd303F19fbDdFb6300eB4AeB2DA7Ceac37",
   },
   [`polygonMumbai`]: {
-    vDAI: "0x8584Fa491eAF3B959dE0888b5B5b9EF60660eb02",
-    vUSDC: "0x90d909005F13D1Dfd2D8Ab62289309C27E1a066d",
-    vUSDT: "0x04A2bc818911a729460b3FfB4B9ff841CFEC93a1",
-    vWETH: "0x6B9f12aD327e2760816A8a6c7A740AeA901fEB21",
-    vWBTC: "0x4ac5719fbd9986b17911815058d3D4f50E6608eA",
+    DAI: "0x8584Fa491eAF3B959dE0888b5B5b9EF60660eb02",
+    USDC: "0x90d909005F13D1Dfd2D8Ab62289309C27E1a066d",
+    USDT: "0x04A2bc818911a729460b3FfB4B9ff841CFEC93a1",
+    WETH: "0x6B9f12aD327e2760816A8a6c7A740AeA901fEB21",
+    WBTC: "0x4ac5719fbd9986b17911815058d3D4f50E6608eA",
   },
   [`avalancheFuji`]: {
-    vDAI: "0x22675C506A8FC26447aFFfa33640f6af5d4D4cF0",
-    vUSDC: "0x36B5dE936eF1710E1d22EabE5231b28581a92ECc",
-    vUSDT: "0x9844386d29EEd970B9F6a2B9a676083b0478210e",
-    vWETH: "0x22a35DB253f4F6D0029025D6312A3BdAb20C2c6A",
-    vWBTC: "0xEB016dFd303F19fbDdFb6300eB4AeB2DA7Ceac37",
+    DAI: "0x22675C506A8FC26447aFFfa33640f6af5d4D4cF0",
+    USDC: "0x36B5dE936eF1710E1d22EabE5231b28581a92ECc",
+    USDT: "0x9844386d29EEd970B9F6a2B9a676083b0478210e",
+    WETH: "0x22a35DB253f4F6D0029025D6312A3BdAb20C2c6A",
+    WBTC: "0xEB016dFd303F19fbDdFb6300eB4AeB2DA7Ceac37",
   },
 };
 
-export const routerConfig = {
+export const routerConfig: RouterMap = {
   ethereumSepolia: {
     address: `0xd0daae2231e9cb96b94c8512223533293c3693bf`,
     chainSelector: `16015286601757825753`,

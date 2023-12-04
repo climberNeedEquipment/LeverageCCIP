@@ -28,7 +28,9 @@ export interface MockERC20Interface extends Interface {
     nameOrSignature:
       | "allowance"
       | "approve"
+      | "approveDelegation"
       | "balanceOf"
+      | "borrowAllowance"
       | "burn"
       | "burnFrom"
       | "decimals"
@@ -56,8 +58,16 @@ export interface MockERC20Interface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "approveDelegation",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "balanceOf",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "borrowAllowance",
+    values: [AddressLike, AddressLike]
   ): string;
   encodeFunctionData(functionFragment: "burn", values: [BigNumberish]): string;
   encodeFunctionData(
@@ -95,7 +105,15 @@ export interface MockERC20Interface extends Interface {
 
   decodeFunctionResult(functionFragment: "allowance", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "approveDelegation",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "borrowAllowance",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "burn", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "burnFrom", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
@@ -226,7 +244,19 @@ export interface MockERC20 extends BaseContract {
     "nonpayable"
   >;
 
+  approveDelegation: TypedContractMethod<
+    [delegatee: AddressLike, amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   balanceOf: TypedContractMethod<[account: AddressLike], [bigint], "view">;
+
+  borrowAllowance: TypedContractMethod<
+    [fromUser: AddressLike, toUser: AddressLike],
+    [bigint],
+    "view"
+  >;
 
   burn: TypedContractMethod<[value: BigNumberish], [void], "nonpayable">;
 
@@ -291,8 +321,22 @@ export interface MockERC20 extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "approveDelegation"
+  ): TypedContractMethod<
+    [delegatee: AddressLike, amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "balanceOf"
   ): TypedContractMethod<[account: AddressLike], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "borrowAllowance"
+  ): TypedContractMethod<
+    [fromUser: AddressLike, toUser: AddressLike],
+    [bigint],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "burn"
   ): TypedContractMethod<[value: BigNumberish], [void], "nonpayable">;

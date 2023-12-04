@@ -456,6 +456,32 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "getUserConfiguration",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "data",
+            type: "uint256",
+          },
+        ],
+        internalType: "struct DataTypesV2.UserConfigurationMap",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
         name: "collateralAsset",
         type: "address",
       },

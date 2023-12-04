@@ -34,17 +34,6 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     address public  immutable i_link;
     Propagator public immutable propagator;
 
-    uint256 public constant LEVERAGE_PRECISION = 1_000_000;
-    uint256 public constant LEVERAGE = 0x0;
-    uint256 public constant DELEVERAGE = 0x1;
-    // Mapping to keep track of allowlisted destination chains.
-    mapping(uint64 => bool) public allowlistedDestinationChains;
-
-    // Mapping to keep track of allowlisted source chains.
-    mapping(uint64 => bool) public allowlistedSourceChains;
-
-
-
     // flags is 3bits expression
     // the 1st for lending pool type(0 for comp 1 for aave)
     // the 2nd for leverage/deleverage(1 for leverage, 0 for deleverage)
@@ -64,8 +53,6 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         uint8 flags;
         bytes signature;
     }
-
-
 
     struct Cache{
         uint256 amount;
@@ -103,8 +90,6 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
     /* ========== ERRORS ========== */
      // Custom errors to provide more descriptive revert messages.
-    error NoMessageReceived(); // Used when trying to access a message but no messages have been received.
-    error IndexOutOfBound(uint256 providedIndex, uint256 maxIndex); // Used when the provided index is out of bounds.
     error SenderNotAllowlisted(address sender); // Used when the sender has not been allowlisted by the contract owner.
     error LengthMismatch(); 
     error InvalidFlashloanCallbackSender();
@@ -114,18 +99,15 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
     /* ========== INITIALIZER ========== */
 
-    constructor(address weth9, address link, address _vault, address router, uint64[] memory chainLists) Ownable(msg.sender) CCIPReceiver(router) {
+    constructor(address weth9,  address router, address link, address _vault) Ownable(msg.sender) CCIPReceiver(router) {
         WETH9 = weth9;
         vault = _vault; // aaveV3 lending pool
         i_link = link;
         propagator =new Propagator(router, link, msg.sender);
-        for (uint256 i = 0; i < chainLists.length; i++) {
-            allowlistedDestinationChains[chainLists[i]] = true;
-            allowlistedSourceChains[chainLists[i]] = true;
-        }
     }
 
-    
+
+
 
     receive() external payable { }
 
@@ -140,8 +122,9 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         returns (uint256 returnAmount)
     {
 
-        if (inputParams.asset.isETH() && inputParams.amount != msg.value) {
+        if (inputParams.asset.isETH()&& inputParams.amount!=msg.value ) {
             revert MsgValueAmountDiff(msg.value, inputParams.amount);
+
         } else {
             inputParams.asset.safeTransferFrom(msg.sender, address(this), inputParams.amount);
         }
@@ -237,8 +220,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         } else {
             _aaveBorrow(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender, inputParams.data);
         }
-        /// Sweep the dust
-        _sweep(inputParams.asset);
+        /// Sweep the assets which are borrowed
+        returnAmount=_sweep(inputParams.asset);
     }
     /// @inheritdoc ILeverager
     function close(
@@ -274,10 +257,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             cache.supplyToken=inputParams.counterAsset;
             cache.flags=inputParams.flags;
             cache.data=inputParams.data;
- 
-            
             _decreasePosition(cache);
-
         }
     }
 
@@ -301,8 +281,14 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         external
         override returns(bool)
     {
-        if (vault!=msg.sender) revert InvalidFlashloanCallbackSender();
-        if (address(this) != initiator) revert InvalidInitiator(initiator);
+    
+        if(vault!=msg.sender){
+            revert InvalidFlashloanCallbackSender();
+        }
+        if(initiator!=address(this)){
+            revert InvalidInitiator(msg.sender);
+        }
+        
 
         if (params.length > 0) {
             LeverageParams memory levParams = abi.decode(params, (LeverageParams));
@@ -360,7 +346,9 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
         address lendingPool = IAToken(supplyToken).POOL();
 
-        IPool(lendingPool).withdraw(token, amount, address(this));
+        
+
+        IPool(lendingPool).withdraw(token.isETH()? WETH9: token, amount, address(this));
         if (isETH) {
             IWETH(WETH9).withdraw(amount);
         }
@@ -392,9 +380,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         }
 
         IPool(lendingPool).borrow(token, amount, uint8(DataTypesV2.InterestRateMode.VARIABLE), 0 ,onBehalfOf);
-        if (address(this) != onBehalfOf) {
-            token.uniTransfer(payable(onBehalfOf), amount);
-        }
+
     }
 
     function _aaveRepay(bool isETH, address token, address borrowToken, uint256 amount, address onBehalfOf) internal {
@@ -464,13 +450,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     {
         // uint256 userTotalBorrow = CToken(supplyToken).borrowBalanceCurrent(onBehalfOf);
         CToken(borrowToken).borrow(amount);
-        if (onBehalfOf != address(this)) {
-            if (isETH) {
-                onBehalfOf.call{ value: amount }("");
-            } else {
-                token.safeTransfer(onBehalfOf, amount);
-            }
-        }
+       
     }
 
     function _compV2Repay(
@@ -691,8 +671,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         _decreasePosition(cache);
     }
 
-    function _sweep(address token) internal {
-        uint256 amount;
+    function _sweep(address token) internal returns(uint256 amount) {
         if (token.isETH()) {
             token = WETH9;
             amount = IWETH(WETH9).balanceOf(address(this));

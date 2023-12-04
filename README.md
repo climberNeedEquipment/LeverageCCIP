@@ -60,7 +60,7 @@ The Leverager contract within LEVER-EZ inherits both CCIP and CCIP receiver cont
 
 ## Usage
 
-We modified the example repository from Chainlink [`ccip-cross-chain-nft`](https://github.com/smartcontractkit/ccip-cross-chain-nft/tree/main). and remained the basic usage docs.
+We modified the example repository from Chainlink [`ccip-cross-chain-nft`](https://github.com/smartcontractkit/ccip-cross-chain-nft/tree/main) and remained the basic usage docs.
 
 We are going to use the [`@chainlink/env-enc`](https://www.npmjs.com/package/@chainlink/env-enc) package for extra security. It encrypts sensitive data instead of storing them as plain text in the `.env` file, by creating a new, `.env.enc` file. Although it's not recommended to push this file online, if that accidentally happens your secrets will still be encrypted.
 
@@ -93,6 +93,23 @@ If you want to validate your inputs you can always run the next command:
 ```shell
 npx env-enc view
 ```
+
+### Faucet
+
+Quicknode provides **0.1 ETHSepolia / 1 Mumbai Matic / 0.2 Fuji Avalanche per day** if you have the accounts or make the accounts.
+
+Infura provides **0.5 ETHSepolia per day** if you have the accounts.
+
+Alchemy provides **0.5 ETHSepolia 0.5 Mumbai Matic per day**.
+
+[Sepolia](https://www.infura.io/faucet/sepolia)
+
+[Mumbai](https://mumbaifaucet.com/)
+
+[Fuji](https://faucet.quicknode.com/avalanche/fuji)
+
+![Aave](./img/aave-faucet.png)
+[Aave](https://app.aave.com/faucet/) provides the mintable ERC20 tokens for testnet environments.
 
 ### Deployment
 

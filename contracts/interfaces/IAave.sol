@@ -375,6 +375,16 @@ interface IPool {
             uint256 healthFactor
         );
 
+      /**
+     * @notice Returns the configuration of the user across all the reserves
+     * @param user The user address
+     * @return The configuration of the user
+     */
+    function getUserConfiguration(
+        address user
+    ) external view returns (DataTypesV2.UserConfigurationMap memory);
+
+
     /**
      * @notice Returns the PoolAddressesProvider connected to this contract
      * @return The address of the PoolAddressesProvider

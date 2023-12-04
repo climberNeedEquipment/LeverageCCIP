@@ -11,4 +11,13 @@ contract MockERC20 is ERC20, ERC20Burnable, Ownable {
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
+
+    function approveDelegation(address delegatee, uint256 amount) external {
+        revert ("not implemented");
+    }
+
+    function borrowAllowance(address fromUser, address toUser) external view returns (uint256) {
+        revert ("not implemented");
+    }
+
 }

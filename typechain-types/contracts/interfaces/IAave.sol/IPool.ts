@@ -103,6 +103,14 @@ export declare namespace DataTypesV3 {
   };
 }
 
+export declare namespace DataTypesV2 {
+  export type UserConfigurationMapStruct = { data: BigNumberish };
+
+  export type UserConfigurationMapStructOutput = [data: bigint] & {
+    data: bigint;
+  };
+}
+
 export interface IPoolInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -120,6 +128,7 @@ export interface IPoolInterface extends Interface {
       | "getReserveNormalizedIncome"
       | "getReservesList"
       | "getUserAccountData"
+      | "getUserConfiguration"
       | "liquidationCall"
       | "mintUnbacked"
       | "rebalanceStableBorrowRate"
@@ -196,6 +205,10 @@ export interface IPoolInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getUserAccountData",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getUserConfiguration",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
@@ -310,6 +323,10 @@ export interface IPoolInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getUserAccountData",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getUserConfiguration",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -491,6 +508,12 @@ export interface IPool extends BaseContract {
         healthFactor: bigint;
       }
     ],
+    "view"
+  >;
+
+  getUserConfiguration: TypedContractMethod<
+    [user: AddressLike],
+    [DataTypesV2.UserConfigurationMapStructOutput],
     "view"
   >;
 
@@ -715,6 +738,13 @@ export interface IPool extends BaseContract {
         healthFactor: bigint;
       }
     ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "getUserConfiguration"
+  ): TypedContractMethod<
+    [user: AddressLike],
+    [DataTypesV2.UserConfigurationMapStructOutput],
     "view"
   >;
   getFunction(
