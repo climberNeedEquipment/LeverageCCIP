@@ -1,0 +1,16 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ReentrancyLock",
+  "sourceName": "contracts/libraries/ReentrancyLock.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "ReentrancyLock",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
