@@ -72,10 +72,10 @@ describe("Leverager", () => {
       if (tokenName === "DAI" || tokenName === "WETH") {
         ERC20[tokenName] = MockERC20__factory.connect(tokenAddress, signer);
         await ERC20[tokenName].approve(leverageAddress, MAX_UINT256);
-        await aaveLendingContract.setUserUseReserveAsCollateral(
-          tokenAddress,
-          true
-        );
+        // await aaveLendingContract.setUserUseReserveAsCollateral(
+        //   tokenAddress,
+        //   true
+        // );
       }
     }
     console.log("Approve to Leverager(ERC20) is finished", leverageAddress);

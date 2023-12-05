@@ -107,8 +107,6 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     }
 
 
-
-
     receive() external payable { }
 
     /// @inheritdoc ILeverager

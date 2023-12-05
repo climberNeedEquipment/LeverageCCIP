@@ -7,5 +7,4 @@ coverage.json
 # Hardhat files
 cache
 /artifacts
-
-typechain
+ 

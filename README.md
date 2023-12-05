@@ -73,11 +73,11 @@ npx env-enc set-pw
 2. Now set the following environment variables: `PRIVATE_KEY`, Source Blockchain RPC URL, Destination Blockchain RPC URL. You can see available options in the `.env.example` file:
 
 ```shell
-ETHEREUM_SEPOLIA_RPC_URL=""
-OPTIMISM_GOERLI_RPC_URL=""
-ARBITRUM_TESTNET_RPC_URL=""
-AVALANCHE_FUJI_RPC_URL=""
-POLYGON_MUMBAI_RPC_URL=""
+ETHEREUM_SEPOLIA_RPC_URL=
+OPTIMISM_GOERLI_RPC_URL=
+ARBITRUM_TESTNET_RPC_URL=
+AVALANCHE_FUJI_RPC_URL=
+POLYGON_MUMBAI_RPC_URL=
 ```
 
 To set these variables, type the following command and follow the instructions in the terminal:
@@ -110,6 +110,15 @@ Alchemy provides **0.5 ETHSepolia 0.5 Mumbai Matic per day**.
 
 ![Aave](./img/aave-faucet.png)
 [Aave](https://app.aave.com/faucet/) provides the mintable ERC20 tokens for testnet environments.
+
+### Approval
+
+Due to transferring the tokens, depositing as a collaterals and borrowing on behalf of the someone, we need many steps to follow to make enable to do all of functions.
+
+To minimize the complexity of contracts for the hackathons, we assumed the users like this
+
+- Who has already supplied to the aaveV2/V3 lending pools before and hasn't disabled the assets as collaterals.
+- Who has
 
 ### Deployment
 
