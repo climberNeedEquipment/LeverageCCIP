@@ -9,13 +9,12 @@ import {IERC165} from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-so
 
 /// @title CCIPReceiver - Base contract for CCIP applications that can receive messages.
 abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165 {
-  address private  i_router;
+  address private immutable i_router;
 
-  function _ccipInitialize(address router) internal {
+  constructor(address router) {
     if (router == address(0)) revert InvalidRouter(address(0));
     i_router = router;
   }
-
 
   /// @notice IERC165 supports an interfaceId
   /// @param interfaceId The interfaceId to check

@@ -11,7 +11,7 @@ import { UniERC20 } from "contracts/libraries/UniERC20.sol";
 import { DataTypesV2 } from "contracts/libraries/DataTypesV2.sol";
 import { IWETH } from "contracts/interfaces/IWETH.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
+import {CCIPReceiver} from "contracts/helpers/CCIPReceiver.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
