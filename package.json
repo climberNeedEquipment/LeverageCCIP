@@ -17,6 +17,6 @@
   },
   "scripts": {
     "compile": "hardhat compile",
-    "typechain": "typechain --target ethers-v6 'artifacts/contracts/**/!(*.dbg).json' --out-dir typechain"
+    "typechain": "typechain --target ethers-v6 'artifacts/contracts/**/!(*.dbg).json' --out-dir typechain-types/contracts"
   }
 }

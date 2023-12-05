@@ -4,7 +4,7 @@ import { getPrivateKey, getProviderRpcUrl, getRouterConfig } from "./utils";
 import { Wallet, ethers, parseEther } from "ethers";
 import { Spinner } from "../utils/spinner";
 import { AAVE_V3_A_TOKENS, MINTABLE_ERC20_TOKENS } from "./constants";
-import { MockERC20, MockERC20__factory } from "../typechain/";
+import { MockERC20, MockERC20__factory } from "../typechain-types/contracts";
 
 task(`mint-erc20`, `Mints several ERC20 tokens to EOA`).setAction(
   async (taskArguments: TaskArguments, hre: HardhatRuntimeEnvironment) => {

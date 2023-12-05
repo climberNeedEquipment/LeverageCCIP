@@ -4,7 +4,9 @@ import {
   ILeverager,
   IPool__factory,
   IPool,
-} from "../typechain";
+  MockERC20,
+  MockERC20__factory,
+} from "../typechain-types/contracts";
 import { resetFork } from "./utils";
 import {
   MINTABLE_ERC20_TOKENS,
@@ -19,7 +21,6 @@ import {
 } from "../tasks/constants";
 import { getPrivateKey } from "../tasks/utils";
 import { expect } from "chai";
-import { MockERC20, MockERC20__factory } from "../typechain";
 import { AbiCoder, Wallet, ethers, parseEther, parseUnits } from "ethers";
 import hre from "hardhat";
 describe("Leverager", () => {

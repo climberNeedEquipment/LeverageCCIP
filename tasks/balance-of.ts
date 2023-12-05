@@ -15,7 +15,7 @@ import {
   MockERC20__factory,
   Multicall3,
   Multicall3__factory,
-} from "../typechain/";
+} from "../typechain-types/contracts";
 import { Spinner } from "../utils/spinner";
 
 task("balance-of", "Gets the balance of tokens for provided address")
