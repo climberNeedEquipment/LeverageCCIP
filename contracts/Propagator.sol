@@ -50,7 +50,6 @@ contract Propagator is Ownable {
     }
 
 
-
     function withdraw(address to, uint256 amount) public onlyOwner {
         uint256 balance = address(this).balance;
         if (amount > balance) {

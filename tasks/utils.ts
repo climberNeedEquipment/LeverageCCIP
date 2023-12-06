@@ -1,10 +1,22 @@
-import { PayFeesIn, routerConfig } from "./constants";
+import {
+  PayFeesIn,
+  routerConfig,
+  RAY,
+  WAD_RAY_RATIO,
+  PERCENTAGE_FACTOR,
+} from "./constants";
 
-import { AbiCoder, ParamType, getCreate2Address, keccak256 } from "ethers";
+import {
+  AbiCoder,
+  ParamType,
+  getBigInt,
+  getCreate2Address,
+  keccak256,
+} from "ethers";
 import {
   Create2DeployerLocal__factory,
   Create2DeployerLocal,
-} from "../typechain";
+} from "../typechain-types/contracts";
 import { Wallet, JsonRpcProvider } from "ethers";
 
 export const getProviderRpcUrl = (network: string) => {
@@ -128,4 +140,142 @@ export class Deployer {
 
     console.log("deployed address: ", create2Addr);
   }
+}
+
+export function rayMul(a: bigint, b: bigint) {
+  return (
+    (getBigInt(a) * getBigInt(b) + getBigInt(RAY) / getBigInt(2)) /
+    getBigInt(RAY)
+  );
+}
+
+export function rayDiv(a: bigint, b: bigint) {
+  return (
+    (getBigInt(a) * getBigInt(RAY) + getBigInt(b) / getBigInt(2)) / getBigInt(b)
+  );
+}
+
+export function wadToRay(a: bigint) {
+  return getBigInt(a) * getBigInt(WAD_RAY_RATIO);
+}
+export function getOverallBorrowRate(
+  totalStableDebt: bigint,
+  totalVariableDebt: bigint,
+  currentVariableBorrowRate: bigint,
+  averageStableBorrowRate: bigint
+): bigint {
+  const totalBorrow = totalStableDebt + totalVariableDebt;
+  if (totalBorrow === getBigInt(0)) return getBigInt(0);
+  const weightedVariableRate = rayMul(
+    wadToRay(totalVariableDebt),
+    currentVariableBorrowRate
+  );
+  const weightedStableRate = rayMul(
+    wadToRay(totalStableDebt),
+    averageStableBorrowRate
+  );
+  return rayDiv(
+    weightedVariableRate + weightedStableRate,
+    wadToRay(totalBorrow)
+  );
+}
+
+function percentMul(value: bigint, percentage: bigint) {
+  return (
+    (value * percentage + getBigInt(PERCENTAGE_FACTOR) / getBigInt(2)) /
+    getBigInt(PERCENTAGE_FACTOR)
+  );
+}
+
+export function calculateAaveInterestRate(
+  totalStableDebt: bigint,
+  totalVariableDebt: bigint,
+  availableLiquidity: bigint,
+  optimalUtilization: bigint,
+  optimalStableToTotalDebtRatio: bigint,
+  maxExcessStableToTotalDebtRatio: bigint,
+  baseVariableBorrowRate: bigint,
+  stableRateSlope1: bigint,
+  stableRateSlope2: bigint,
+  variableRateSlope1: bigint,
+  variableRateSlope2: bigint,
+  stableBaseBorrowRate: bigint,
+  stableRateExcessOffset: bigint,
+  reserveFactor: bigint,
+  unbacked: bigint
+): {
+  borrowUsageRatio: bigint;
+  currentLiquidityRate: bigint;
+  currentStableBorrowRate: bigint;
+  currentVariableBorrowRate: bigint;
+} {
+  const totalBorrow = totalStableDebt + totalVariableDebt;
+
+  const totalLiquidity = availableLiquidity + totalBorrow;
+  let borrowUsageRatio = getBigInt(0);
+  let supplyUsageRatio = getBigInt(0);
+
+  let currentVariableBorrowRate = baseVariableBorrowRate;
+  let currentStableBorrowRate = stableBaseBorrowRate;
+  let stableToTotalDebtRatio = getBigInt(0);
+  if (totalBorrow !== getBigInt(0)) {
+    stableToTotalDebtRatio = rayDiv(totalStableDebt, totalBorrow);
+    borrowUsageRatio = rayDiv(totalBorrow, totalLiquidity);
+    supplyUsageRatio = rayDiv(totalBorrow, totalLiquidity + unbacked);
+  }
+
+  if (borrowUsageRatio > optimalUtilization) {
+    const excessBorrowUsageRatio = rayDiv(
+      borrowUsageRatio - optimalUtilization,
+      getBigInt(RAY) - optimalUtilization
+    );
+    currentStableBorrowRate +=
+      stableRateSlope1 + rayMul(stableRateSlope2, excessBorrowUsageRatio);
+    currentVariableBorrowRate +=
+      variableRateSlope1 + rayMul(variableRateSlope2, excessBorrowUsageRatio);
+  } else {
+    currentStableBorrowRate += rayDiv(
+      rayMul(stableRateSlope1, borrowUsageRatio),
+      optimalUtilization
+    );
+    currentVariableBorrowRate += rayDiv(
+      rayMul(variableRateSlope1, borrowUsageRatio),
+      optimalUtilization
+    );
+  }
+
+  if (stableToTotalDebtRatio > optimalStableToTotalDebtRatio) {
+    const excessStableDebtRatio = rayDiv(
+      stableToTotalDebtRatio - optimalStableToTotalDebtRatio,
+      maxExcessStableToTotalDebtRatio
+    );
+    currentStableBorrowRate += rayMul(
+      stableRateExcessOffset,
+      excessStableDebtRatio
+    );
+  }
+
+  const currentLiquidityRate = percentMul(
+    rayMul(
+      getOverallBorrowRate(
+        totalStableDebt,
+        totalVariableDebt,
+        currentVariableBorrowRate,
+        currentStableBorrowRate
+      ),
+      supplyUsageRatio
+    ),
+    getBigInt(PERCENTAGE_FACTOR) - reserveFactor
+  );
+
+  return {
+    borrowUsageRatio,
+    currentLiquidityRate,
+    currentStableBorrowRate,
+    currentVariableBorrowRate,
+  };
+}
+
+export function calculateFlashloanLeverage() {
+  // TODO
 }

@@ -6,7 +6,7 @@ import {
   IPool,
   MockERC20,
   MockERC20__factory,
-} from "../typechain-types/contracts";
+} from "../typechain-types";
 import { resetFork } from "./utils";
 import {
   MINTABLE_ERC20_TOKENS,
@@ -42,6 +42,10 @@ describe("Leverager", () => {
     const wallet = new Wallet(privateKey);
 
     signer = await hre.ethers.getSigner(wallet.address);
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [signer.address],
+    });
 
     leverager = (
       await (
@@ -54,18 +58,14 @@ describe("Leverager", () => {
       )
     ).connect(signer);
 
-    const aaveLendingContract: IPool = await IPool__factory.connect(
-      LENDING_POOLS[network].AaveV3LendingPool,
-      signer
-    );
+    // const aaveLendingContract: IPool = await IPool__factory.connect(
+    //   LENDING_POOLS[network].AaveV3LendingPool,
+    //   signer
+    // );
+
     const leverageAddress = await leverager.getAddress();
 
     console.log("Leverager deployed to:", leverageAddress);
-
-    await hre.network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [signer.address],
-    });
 
     for (const [tokenName, tokenAddress] of Object.entries(
       MINTABLE_ERC20_TOKENS[network]

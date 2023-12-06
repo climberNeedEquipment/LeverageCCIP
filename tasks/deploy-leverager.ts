@@ -11,6 +11,7 @@ import {
 } from "./constants";
 import { Deployer } from "./utils";
 import { bytecode as leverage_bytecode } from "../artifacts/contracts/Leverager.sol/Leverager.json";
+import { bytecode as multicall3_bytecode } from "../artifacts/contracts/helpers/Multicall3.sol/Multicall3.json";
 task(`deploy-leverager`, `Deploys Leverager.sol smart contract`)
   .addOptionalParam(
     `vault`,
@@ -47,9 +48,8 @@ task(`deploy-leverager`, `Deploys Leverager.sol smart contract`)
       );
       spinner.start();
 
-      // const sourceMinterFactory: SourceMinter__factory = await hre.ethers.getContractFactory('SourceMinter') as SourceMinter__factory;
-      // const sourceMinter: SourceMinter = await sourceMinterFactory.deploy(routerAddress, linkAddress);
-      // await sourceMinter.deployed();
+      // await deployer.deploy(id("lever-ez"), multicall3_bytecode);
+
       await deployer.deploy(
         id("lever-ez"),
         leverage_bytecode +

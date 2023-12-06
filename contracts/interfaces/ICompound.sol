@@ -177,6 +177,9 @@ interface Comptroller {
      * @param cTokens The list of markets to claim COMP in
      */
     function claimComp(address holder, address[] memory cTokens) external;
+
+
+    function getAccountLiquidity(address account) external view returns (uint, uint, uint);
 }
 
 interface CNative {

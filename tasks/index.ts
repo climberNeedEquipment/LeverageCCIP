@@ -1,5 +1,6 @@
 import "./balance-of";
-import "./cross-chain-mint";
+import "./lending-status";
+import "./lending-user-status";
 import "./deploy-leverager";
 import "./fill-sender";
 import "./withdraw";

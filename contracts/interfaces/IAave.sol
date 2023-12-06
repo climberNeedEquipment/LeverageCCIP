@@ -93,6 +93,15 @@ interface IFlashLoanReceiver {
         returns (bool);
 }
 
+interface IPoolV2{
+    /**
+     * @notice Returns the state and configuration of the reserve
+     * @param asset The address of the underlying asset of the reserve
+     * @return The state and configuration data of the reserve
+     */
+    function getReserveData(address asset) external view returns (DataTypesV2.ReserveData memory);
+}
+
 interface IPool {
     /* @notice Mints an `amount` of aTokens to the `onBehalfOf`
      * @param asset The address of the underlying asset to mint
@@ -677,6 +686,13 @@ interface ILendingPool {
 }
 
 interface IUiIncentiveDataProviderV3 {
+
+    struct BaseCurrencyInfo {
+        uint256 marketReferenceCurrencyUnit;
+        int256 marketReferenceCurrencyPriceInUsd;
+        int256 networkBaseTokenPriceInUsd;
+        uint8 networkBaseTokenPriceDecimals;
+    }
     struct AggregatedReserveIncentiveData {
         address underlyingAsset;
         IncentiveData aIncentiveData;
@@ -727,6 +743,11 @@ interface IUiIncentiveDataProviderV3 {
         uint8 priceFeedDecimals;
         uint8 rewardTokenDecimals;
     }
+
+    function getReservesData(IPoolAddressesProvider provider)
+        external
+        view
+        returns (AggregatedReserveIncentiveData[] memory, BaseCurrencyInfo memory);
 
     function getReservesIncentivesData(IPoolAddressesProvider provider)
         external
@@ -797,7 +818,6 @@ interface IUiPoolDataProviderV3 {
         uint256 baseVariableBorrowRate;
         uint256 optimalUsageRatio;
     }
-
     struct AggregatedReserveData {
         address underlyingAsset;
         string name;
@@ -813,6 +833,12 @@ interface IUiPoolDataProviderV3 {
         bool isActive;
         bool isFrozen;
         // base data
+        uint128 liquidityIndex;
+        uint128 variableBorrowIndex;
+        uint128 liquidityRate;
+        uint128 variableBorrowRate;
+        uint128 stableBorrowRate;
+        uint40 lastUpdateTimestamp;
         address aTokenAddress;
         address stableDebtTokenAddress;
         address variableDebtTokenAddress;

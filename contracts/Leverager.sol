@@ -32,6 +32,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     address public immutable vault;
     address public immutable WETH9;
     address public  immutable i_link;
+    mapping(uint64 => address) public dstToLeverager;
     Propagator public immutable propagator;
 
     // flags is 3bits expression
@@ -108,6 +109,10 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
 
     receive() external payable { }
+
+    function addDstChain(uint64 destChainSelector, address leverager) external onlyOwner {
+        dstToLeverager[destChainSelector]=leverager;
+    }
 
     /// @inheritdoc ILeverager
     function supply(
@@ -290,7 +295,6 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
         if (params.length > 0) {
             LeverageParams memory levParams = abi.decode(params, (LeverageParams));
-            uint256 premium = IPool(msg.sender).FLASHLOAN_PREMIUM_TOTAL();
 
             // premium for flashloan is 0.05% of the amount
             // premium for using lever-ez is 0.05% of the amount
@@ -525,7 +529,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             Client.EVM2AnyMessage[] memory messages =new Client.EVM2AnyMessage[](destChainSelectors.length);
             for (uint256 i; i<destChainSelectors.length; i++){
                 Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-                    receiver: abi.encode(address(this)),
+                    receiver: abi.encode(dstToLeverager[destChainSelectors[i]]),
                     data: abi.encode(msg.sender, cache.asset, cache.supplyToken, cache.flags, msgsData),
                     tokenAmounts: new Client.EVMTokenAmount[](0),
                     extraArgs: "",
