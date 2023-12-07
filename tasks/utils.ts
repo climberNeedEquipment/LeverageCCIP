@@ -235,6 +235,19 @@ export function calculateCompoundedInterest(
   );
 }
 
+export function calculateAvailableBorrows(
+  totalCollateralBase: bigint,
+  totalDebtBase: bigint,
+  avgLTV: bigint
+): bigint {
+  let availableBorrowBase = percentMul(totalCollateralBase, avgLTV);
+  if (availableBorrowBase === totalDebtBase) return getBigInt(0);
+
+  availableBorrowBase = availableBorrowBase - totalDebtBase;
+
+  return availableBorrowBase;
+}
+
 export function calculateAaveInterestRate(
   totalStableDebt: bigint,
   totalVariableDebt: bigint,
@@ -261,10 +274,6 @@ export function calculateAaveInterestRate(
 
   const totalLiquidity = availableLiquidity + totalBorrow;
 
-  console.log("availableLiquidity", availableLiquidity);
-  console.log("totalStableDebt", totalStableDebt);
-  console.log("totalVariableDebt", totalVariableDebt);
-
   let borrowUsageRatio = getBigInt(0);
   let supplyUsageRatio = getBigInt(0);
 
@@ -276,8 +285,6 @@ export function calculateAaveInterestRate(
     borrowUsageRatio = rayDiv(totalBorrow, totalLiquidity);
     supplyUsageRatio = rayDiv(totalBorrow, totalLiquidity + unbacked);
   }
-
-  console.log("borrowUsageRatio", borrowUsageRatio);
 
   if (borrowUsageRatio > optimalUtilization) {
     const excessBorrowUsageRatio = rayDiv(
@@ -332,24 +339,22 @@ export function calculateAaveInterestRate(
 }
 
 export function calculateLeverage(
-  supplyAmt: bigint,
-  suppliedAmt: bigint,
-  currentLTV: bigint,
-  targetLTV: bigint,
-  priceBorrow: bigint,
-  priceSupplyExchangeRate: bigint, // ray expressions
-  flashloanFeePremium: bigint // precision 10000
+  supplyAmt: number,
+  suppliedAmt: number,
+  currentLTV: number,
+  targetLTV: number,
+  priceBorrow: number,
+  priceSupplyExchangeRate: number, // ray expressions
+  flashloanFeePremium: number // precision 10000
 ) {
   const numerator =
-    (supplyAmt + suppliedAmt) * (getBigInt(10000) + flashloanFeePremium) -
+    (supplyAmt + suppliedAmt) * (1 + flashloanFeePremium) -
     suppliedAmt * priceBorrow * currentLTV;
 
   let denominator =
-    getBigInt(10000) +
-    flashloanFeePremium -
-    targetLTV * priceBorrow * priceSupplyExchangeRate;
+    1 + flashloanFeePremium - targetLTV * priceBorrow * priceSupplyExchangeRate;
 
-  if (suppliedAmt === getBigInt(0)) {
+  if (suppliedAmt === 0) {
     denominator *= suppliedAmt;
   } else {
     denominator *= supplyAmt;
@@ -357,68 +362,83 @@ export function calculateLeverage(
 
   return { leverage: numerator / denominator };
 }
-
-export function calculateFlashloanLeverageBaseAmount(
-  supplyAmt: bigint,
-  suppliedAmt: bigint,
-  currentLTV: bigint, // precision 10000
-  targetLTV: bigint, // precision 10000
-  priceBorrow: bigint,
-  priceSupplyExchangeRate: bigint, // ray expressions
-  flashloanFeePremium: bigint // precision 10000
-): { flashloanAmount: bigint } {
+/// Take USD
+export function calculateFlashloanLeverageToTargetLTV(
+  supplyAmt: number,
+  suppliedAmt: number,
+  borrowedAmt: number,
+  leverage: number,
+  priceBorrow: number,
+  priceSupplyExchangeRate: number, // ray expressions
+  flashloanFeePremium: number // precision 10000
+): { targetLTV: number } {
   const numerator =
-    suppliedAmt * priceBorrow * (targetLTV - currentLTV) * getBigInt(RAY) +
-    supplyAmt * targetLTV * priceBorrow * priceSupplyExchangeRate;
+    (suppliedAmt + supplyAmt) * (leverage - 1) * (1 + flashloanFeePremium) +
+    priceBorrow * borrowedAmt * priceSupplyExchangeRate;
 
   const denominator =
-    (getBigInt(10000) + flashloanFeePremium) * getBigInt(RAY) -
-    targetLTV * priceBorrow * priceSupplyExchangeRate;
+    (suppliedAmt + supplyAmt) *
+    leverage *
+    priceBorrow *
+    priceSupplyExchangeRate;
+
+  return { targetLTV: numerator / denominator };
+}
+
+export function calculateFlashloanDeleverageBaseAmount(
+  supplyAmt: number,
+  suppliedAmt: number,
+  currentLTV: number,
+  targetLTV: number,
+  priceBorrow: number,
+  priceSupplyExchangeRate: number, // ray expressions
+  flashloanFeePremium: number
+): { flashloanAmount: number } {
+  const numerator =
+    (suppliedAmt * priceBorrow * currentLTV -
+      supplyAmt -
+      suppliedAmt * targetLTV) *
+    priceSupplyExchangeRate;
+  const denominator =
+    (1 + flashloanFeePremium) * targetLTV + priceSupplyExchangeRate;
+
+  return { flashloanAmount: numerator / denominator };
+}
+
+export function calculateFlashloanLeverageBaseAmount(
+  supplyAmt: number,
+  suppliedAmt: number,
+  currentLTV: number,
+  targetLTV: number,
+  priceBorrow: number,
+  priceSupplyExchangeRate: number, // ray expressions
+  flashloanFeePremium: number
+): { flashloanAmount: number } {
+  const numerator =
+    (supplyAmt * targetLTV + suppliedAmt * (targetLTV - currentLTV)) *
+    priceBorrow *
+    priceSupplyExchangeRate;
+
+  const denominator =
+    1 + flashloanFeePremium - targetLTV * priceBorrow * priceSupplyExchangeRate;
 
   return { flashloanAmount: numerator / denominator };
 }
 
 export function calculateFlashloanLeverageQuoteAmount(
-  supplyAmt: bigint,
-  suppliedAmt: bigint,
-  currentLTV: bigint, // precision 10000
-  targetLTV: bigint, // precision 10000
-  priceBorrow: bigint,
-  priceSupplyExchangeRate: bigint, // ray expressions
-  flashloanFeePremium: bigint // precision 10000
-): { flashloanAmount: bigint } {
+  supplyAmt: number,
+  suppliedAmt: number,
+  currentLTV: number,
+  targetLTV: number,
+  priceBorrow: number,
+  priceSupplyExchangeRate: number, // ray expressions
+  flashloanFeePremium: number
+): { flashloanAmount: number } {
   const numerator =
-    (suppliedAmt * (targetLTV - currentLTV) + supplyAmt * currentLTV) *
+    (suppliedAmt * (targetLTV - currentLTV) + supplyAmt * targetLTV) *
     priceBorrow;
-
   const denominator =
-    (getBigInt(10000) + flashloanFeePremium) * getBigInt(RAY) -
-    targetLTV * priceBorrow * priceSupplyExchangeRate;
+    1 + flashloanFeePremium - targetLTV * priceBorrow * priceSupplyExchangeRate;
 
-  return { flashloanAmount: numerator / denominator };
-}
-
-export function calculateFlashloanDeleverage(
-  supplyAmt: bigint,
-  suppliedAmt: bigint,
-  currentLTV: bigint,
-  targetLTV: bigint,
-  priceBorrow: bigint,
-  priceBorrowExchangeRate: bigint, // ray expressions
-  flashloanFeePremium: bigint // precision 10000
-) {
-  const numerator =
-    priceBorrow *
-    priceBorrowExchangeRate *
-    suppliedAmt *
-    (currentLTV - targetLTV) *
-    getBigInt(RAY);
-
-  const denominator =
-    priceBorrowExchangeRate * getBigInt(RAY) * getBigInt(10000) -
-    (getBigInt(10000) + flashloanFeePremium) *
-      targetLTV *
-      priceBorrow *
-      getBigInt(RAY);
   return { flashloanAmount: numerator / denominator };
 }

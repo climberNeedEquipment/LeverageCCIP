@@ -8,6 +8,10 @@ import {
   calculateCompoundedInterest,
   rayMul,
   calculateLinearInterest,
+  calculateLeverage,
+  calculateFlashloanLeverageBaseAmount,
+  calculateFlashloanLeverageToTargetLTV,
+  calculateFlashloanLeverageQuoteAmount,
 } from "./utils";
 
 import {
@@ -22,6 +26,7 @@ import {
   RewardTokens,
   SECONDS_PER_YEAR,
   RAY,
+  MAX_UINT256,
 } from "./constants";
 import { Wallet, getBigInt } from "ethers";
 
@@ -52,6 +57,10 @@ task("lending-status", "Gets the balance of tokens for provided address")
       signer
     );
 
+    const aaveV3 = IPool__factory.connect(
+      LENDING_POOLS[taskArguments.blockchain].AaveV3LendingPool,
+      signer
+    );
     const aaveV3PoolDataProvider = IUiPoolDataProviderV3__factory.connect(
       LENDING_POOLS[taskArguments.blockchain].AaveV3UiPoolDataProvider,
       signer
@@ -346,8 +355,145 @@ task("lending-status", "Gets the balance of tokens for provided address")
         }
       );
     });
-
     console.log(aaveV3IncentiveStatus);
+
+    const accountData = await aaveV3.getUserAccountData(wallet.address);
+    const aaveV3AccountNetStatus: Record<string, string> = {};
+    aaveV3AccountNetStatus["totalCollateralBase"] =
+      accountData.totalCollateralBase.toString();
+    aaveV3AccountNetStatus["totalDebtBase"] =
+      accountData.totalDebtBase.toString();
+    aaveV3AccountNetStatus["availableBorrowsBase"] =
+      accountData.availableBorrowsBase.toString();
+    aaveV3AccountNetStatus["currentLiquidationThreshold"] =
+      accountData.currentLiquidationThreshold.toString();
+    aaveV3AccountNetStatus["ltv"] = accountData.ltv.toString();
+    aaveV3AccountNetStatus["healthFactor"] =
+      accountData.healthFactor.toString();
+    aaveV3AccountNetStatus["baseDecimals"] =
+      aaveV3Data[1].networkBaseTokenPriceDecimals.toString();
+
+    console.log(aaveV3AccountNetStatus);
+
+    const aaveFloatStatus: Record<string, Record<string, string | number>> = {};
+    console.log();
+    for (const name of Object.keys(aaveV3Status)) {
+      const element = aaveV3Status[name];
+      aaveFloatStatus[name] = {};
+
+      aaveFloatStatus[name]["price"] =
+        parseFloat(element["price"]) /
+        parseFloat(
+          (
+            getBigInt(10) ** getBigInt(element["priceOracleDecimals"])
+          ).toString()
+        );
+
+      const baseDecimals = parseFloat(
+        (
+          getBigInt(10) ** getBigInt(aaveV3AccountNetStatus.baseDecimals)
+        ).toString()
+      );
+
+      const borrowAmtUSD =
+        (((parseFloat(aaveV3AccountNetStatus.totalCollateralBase) -
+          parseFloat(aaveV3AccountNetStatus.totalDebtBase)) /
+          baseDecimals) *
+          parseFloat(aaveV3AccountNetStatus.ltv)) /
+        10000;
+
+      console.log(borrowAmtUSD);
+      aaveFloatStatus[name]["maxLTV"] =
+        parseFloat(element.baseLTVasCollateral) / 100;
+
+      aaveFloatStatus[name]["liquidationThreshold"] =
+        parseFloat(element.reserveLiquidationThreshold) / 100;
+      aaveFloatStatus[name]["availableBorrowAmount"] =
+        (((parseFloat(aaveV3AccountNetStatus.totalCollateralBase) -
+          parseFloat(aaveV3AccountNetStatus.totalDebtBase)) /
+          baseDecimals /
+          (aaveFloatStatus[name]["price"] as number)) *
+          parseFloat(aaveV3AccountNetStatus.ltv)) /
+        10000;
+      aaveFloatStatus[name]["supplyAPR"] =
+        (parseFloat(element.liquidityRate) / parseFloat(RAY)) * 100;
+      aaveFloatStatus[name]["variableBorrowAPR"] =
+        (parseFloat(element.variableBorrowRate) / parseFloat(RAY)) * 100;
+      aaveFloatStatus[name]["stableBorrowAPR"] =
+        (parseFloat(element.stableBorrowRate) / parseFloat(RAY)) * 100;
+      aaveFloatStatus[name]["totalSupply"] =
+        parseFloat(element["totalATokenSupply"]) /
+        parseFloat(
+          (getBigInt(10) ** getBigInt(element["decimals"])).toString()
+        );
+      aaveFloatStatus[name]["totalSupplyUSD"] =
+        (aaveFloatStatus[name]["totalSupply"] as number) *
+        (aaveFloatStatus[name]["price"] as number);
+      aaveFloatStatus[name]["totalBorrow"] =
+        (parseFloat(element["totalVariableDebt"]) +
+          parseFloat(element["totalStableDebt"])) /
+        parseFloat(
+          (getBigInt(10) ** getBigInt(element["decimals"])).toString()
+        );
+      aaveFloatStatus[name]["totalBorrowUSD"] =
+        (aaveFloatStatus[name]["totalBorrow"] as number) *
+        (aaveFloatStatus[name]["price"] as number);
+
+      aaveFloatStatus[name]["availableLiquidityUSD"] =
+        (parseFloat(element["availableLiquidity"]) /
+          parseFloat(
+            (getBigInt(10) ** getBigInt(element["decimals"])).toString()
+          )) *
+        (aaveFloatStatus[name]["price"] as number);
+
+      aaveFloatStatus[name]["utilizationRate"] =
+        (parseFloat(element.borrowUsageRatio) / parseFloat(RAY)) * 100;
+
+      aaveFloatStatus[name]["liquidationPenalty"] =
+        parseFloat(element.reserveLiquidationBonus) / 100 - 100;
+    }
+    aaveFloatStatus["user"] = {};
+    const baseDecimals = parseFloat(
+      (
+        getBigInt(10) ** getBigInt(aaveV3AccountNetStatus.baseDecimals)
+      ).toString()
+    );
+    aaveFloatStatus["user"]["totalCollateralUSD"] =
+      parseFloat(aaveV3AccountNetStatus.totalCollateralBase) / baseDecimals;
+
+    aaveFloatStatus["user"]["totalDebtUSD"] =
+      parseFloat(aaveV3AccountNetStatus.totalDebtBase) / baseDecimals;
+
+    aaveFloatStatus["user"]["availableBorrowsUSD"] =
+      parseFloat(aaveV3AccountNetStatus.availableBorrowsBase) / baseDecimals;
+
+    aaveFloatStatus["user"]["ltv"] =
+      parseFloat(aaveV3AccountNetStatus.ltv) / 100;
+
+    aaveFloatStatus["user"]["healthFactor"] =
+      parseFloat(aaveV3AccountNetStatus.totalDebtBase) == 0
+        ? parseFloat(MAX_UINT256)
+        : (aaveFloatStatus["user"]["totalCollateralUSD"] *
+            aaveFloatStatus["user"]["ltv"]) /
+          aaveFloatStatus["user"]["totalDebtUSD"] /
+          100;
+
+    aaveFloatStatus["user"]["currentLTV"] =
+      (aaveFloatStatus["user"]["totalDebtUSD"] /
+        aaveFloatStatus["user"]["totalCollateralUSD"]) *
+      100;
+
+    console.log(
+      "target ltv",
+      calculateFlashloanLeverageToTargetLTV(1, 1, 1, 2, 2, 0.5, 0)
+    );
+
+    console.log(
+      "aave flashloan amount",
+      calculateFlashloanLeverageBaseAmount(2, 2, 0, 0.5, 2, 1 / 2, 0),
+
+      calculateFlashloanLeverageQuoteAmount(2, 4, 0, 0.5, 2, 1 / 2, 0)
+    );
 
     // const compV2Status: Record<string, Record<string, string>> = {};
 
