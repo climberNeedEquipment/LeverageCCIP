@@ -221,7 +221,7 @@ task("lending-status", "Gets the balance of tokens for provided address")
         aaveV3Status[name]["aTokenScaledTotalSupply"]
       );
 
-      const totalLiquidity = rayMul(
+      const totalATokenSupply = rayMul(
         getBigInt(aaveV3Status[name]["aTokenScaledTotalSupply"]),
         rayMul(
           calculateLinearInterest(
@@ -233,7 +233,8 @@ task("lending-status", "Gets the balance of tokens for provided address")
         )
       );
 
-      console.log("totalLiquidity: ", totalLiquidity.toString());
+      aaveV3Status[name]["totalATokenSupply"] = totalATokenSupply.toString();
+
       const totalVariableDebt = rayMul(
         rayMul(
           calculateCompoundedInterest(
@@ -272,190 +273,81 @@ task("lending-status", "Gets the balance of tokens for provided address")
         getBigInt(element.unbacked)
       );
 
-      aaveV3Status[element.name.toString()]["borrowUsageRatio"] =
+      aaveV3Status[name]["totalVariableDebt"] = totalVariableDebt.toString();
+      aaveV3Status[name]["totalStableDebt"] = totalStableDebt.toString();
+      aaveV3Status[name]["borrowUsageRatio"] =
         interestRate.borrowUsageRatio.toString();
-      aaveV3Status[element.name.toString()]["liquidityRate"] =
+      aaveV3Status[name]["liquidityRate"] =
         interestRate.currentLiquidityRate.toString();
-      aaveV3Status[element.name.toString()]["stableBorrowRate"] =
+      aaveV3Status[name]["stableBorrowRate"] =
         interestRate.currentStableBorrowRate.toString();
-      aaveV3Status[element.name.toString()]["variableBorrowRate"] =
+      aaveV3Status[name]["variableBorrowRate"] =
         interestRate.currentVariableBorrowRate.toString();
     });
 
     console.log(aaveV3Status);
 
-    // const aaveV3IncentiveStatus: Record<string, APR> = {};
+    const aaveV3IncentiveStatus: Record<string, APR> = {};
 
-    // aaveV3IncentiveData.forEach((element) => {
-    //   const name = TOKEN_ADDRESS_TO_NAME[element.underlyingAsset.toString()];
-    //   aaveV3IncentiveStatus[name] = { rewards: [], totalAPR: "0" };
-    //   let aTotalAPR = getBigInt(0);
-    //   element.aIncentiveData.rewardsTokenInformation.forEach(
-    //     (aIncentiveData) => {
-    //       const numerator =
-    //         getBigInt("1000000") *
-    //         getBigInt(SECONDS_PER_YEAR) *
-    //         getBigInt(aIncentiveData.emissionPerSecond) *
-    //         getBigInt(aIncentiveData.rewardPriceFeed) *
-    //         getBigInt(10) **
-    //           getBigInt(aaveV3Status[name]["priceOracleDecimals"]);
+    aaveV3IncentiveData.forEach((element) => {
+      const name = TOKEN_ADDRESS_TO_NAME[element.underlyingAsset.toString()];
+      aaveV3IncentiveStatus[name] = { rewards: [], totalAPR: "0" };
+      let aTotalAPR = getBigInt(0);
+      element.aIncentiveData.rewardsTokenInformation.forEach(
+        (aIncentiveData) => {
+          /// decimals 6
+          const numerator =
+            getBigInt("1000000") *
+            getBigInt(SECONDS_PER_YEAR) *
+            getBigInt(aIncentiveData.emissionPerSecond) *
+            getBigInt(aIncentiveData.rewardPriceFeed) *
+            getBigInt(10) **
+              getBigInt(aaveV3Status[name]["priceOracleDecimals"]);
 
-    //       const denominator =
-    //         (getBigInt(aaveV3Status[name]["availableLiquidity"]) +
-    //           getBigInt(aaveV3Status[name]["totalPrincipalStableDebt"]) +
-    //           getBigInt(aaveV3Status[name]["totalScaledVariableDebt"])) *
-    //         getBigInt(aaveV3Status[name]["price"]) *
-    //         getBigInt(10) ** getBigInt(aIncentiveData.rewardTokenDecimals);
+          const denominator =
+            getBigInt(aaveV3Status[name]["totalATokenSupply"]) *
+            getBigInt(aaveV3Status[name]["price"]) *
+            getBigInt(10) ** getBigInt(aIncentiveData.rewardTokenDecimals);
 
-    //       aaveV3IncentiveStatus[name]["rewards"].push({
-    //         token: aIncentiveData.rewardTokenSymbol,
-    //         tokenPrice: aIncentiveData.rewardPriceFeed.toString(),
-    //         tokenPriceDecimals: aIncentiveData.rewardTokenDecimals.toString(),
-    //         APR: (numerator / denominator).toString(),
-    //       });
-    //       aTotalAPR += numerator / denominator;
-    //     }
-    //   );
-    //   aaveV3IncentiveStatus[name]["totalAPR"] = aTotalAPR.toString();
-    //   let vTotalAPR = getBigInt(0);
-    //   element.vIncentiveData.rewardsTokenInformation.forEach(
-    //     (vIncentiveData) => {
-    //       const numerator =
-    //         getBigInt("1000000") *
-    //         getBigInt(SECONDS_PER_YEAR) *
-    //         getBigInt(vIncentiveData.emissionPerSecond) *
-    //         getBigInt(vIncentiveData.rewardPriceFeed) *
-    //         getBigInt(10) **
-    //           getBigInt(aaveV3Status[name]["priceOracleDecimals"]);
+          aaveV3IncentiveStatus[name]["rewards"].push({
+            token: aIncentiveData.rewardTokenSymbol,
+            tokenPrice: aIncentiveData.rewardPriceFeed.toString(),
+            tokenPriceDecimals: aIncentiveData.rewardTokenDecimals.toString(),
+            APR: (numerator / denominator).toString(),
+          });
+          aTotalAPR += numerator / denominator;
+        }
+      );
+      aaveV3IncentiveStatus[name]["totalAPR"] = aTotalAPR.toString();
+      let vTotalAPR = getBigInt(0);
+      element.vIncentiveData.rewardsTokenInformation.forEach(
+        (vIncentiveData) => {
+          /// decimals 6
+          const numerator =
+            getBigInt("1000000") *
+            getBigInt(SECONDS_PER_YEAR) *
+            getBigInt(vIncentiveData.emissionPerSecond) *
+            getBigInt(vIncentiveData.rewardPriceFeed) *
+            getBigInt(10) **
+              getBigInt(aaveV3Status[name]["priceOracleDecimals"]);
 
-    //       const denominator =
-    //         getBigInt(aaveV3Status[name]["totalScaledVariableDebt"]) *
-    //         getBigInt(aaveV3Status[name]["price"]) *
-    //         getBigInt(10) ** getBigInt(vIncentiveData.rewardTokenDecimals);
+          const denominator =
+            getBigInt(aaveV3Status[name]["totalVariableDebt"]) *
+            getBigInt(aaveV3Status[name]["price"]) *
+            getBigInt(10) ** getBigInt(vIncentiveData.rewardTokenDecimals);
 
-    //       aaveV3IncentiveStatus[name]["rewards"].push({
-    //         token: vIncentiveData.rewardTokenSymbol,
-    //         tokenPrice: vIncentiveData.rewardPriceFeed.toString(),
-    //         tokenPriceDecimals: vIncentiveData.rewardTokenDecimals.toString(),
-    //         APR: (numerator / denominator).toString(),
-    //       });
-    //       aTotalAPR += numerator / denominator;
-    //     }
-    //   );
-    // });
+          aaveV3IncentiveStatus[name]["rewards"].push({
+            token: vIncentiveData.rewardTokenSymbol,
+            tokenPrice: vIncentiveData.rewardPriceFeed.toString(),
+            tokenPriceDecimals: vIncentiveData.rewardTokenDecimals.toString(),
+            APR: (numerator / denominator).toString(),
+          });
+          vTotalAPR += numerator / denominator;
+        }
+      );
+    });
 
-    // console.log(aaveV3Status);
-    // aaveV3IncentiveCalls;
-
-    // Deposit and Borrow calculations
-    // APY and APR are returned here as decimals, multiply by 100 to get the percents
-
-    // depositAPR = liquidityRate / RAY;
-    // variableBorrowAPR = variableBorrowRate / RAY;
-    // stableBorrowAPR = variableBorrowRate / RAY;
-
-    // WEI_DECIMALS = 10 ** 18; // All emissions are in wei units, 18 decimal places
-
-    // UNDERLYING_TOKEN_DECIMALS will be the decimals of token underlying the aToken or debtToken
-    // For Example, UNDERLYING_TOKEN_DECIMALS for aUSDC will be 10**6 because USDC has 6 decimals
-
-    // incentiveDepositAPRPercent =
-    //   (100 * (aEmissionPerYear * REWARD_PRICE_ETH * WEI_DECIMALS)) /
-    //   (totalATokenSupply * TOKEN_PRICE_ETH * UNDERLYING_TOKEN_DECIMALS);
-
-    // incentiveBorrowAPRPercent =
-    //   (100 * (vEmissionPerYear * REWARD_PRICE_ETH * WEI_DECIMALS)) /
-    //   (totalCurrentVariableDebt * TOKEN_PRICE_ETH * UNDERLYING_TOKEN_DECIMALS);
-
-    // for (const lending in LENDING_POOLS[taskArguments.blockchain]) {
-    //   if (lending.includes("AAVE")) {
-    //     aaveCalls.push();
-    //     for (const token in MINTABLE_ERC20_TOKENS[taskArguments.blockchain]) {
-    //       aaveCalls.push({
-    //         target: LENDING_POOLS[taskArguments.blockchain][lending],
-    //         allowFailure: true,
-    //         callData: aaveV3.encodeFunctionData("getReservesData", [
-    //           MINTABLE_ERC20_TOKENS[taskArguments.blockchain][token],
-    //         ]),
-    //       });
-
-    //       aaveCalls.push({
-    //         target: LENDING_POOLS[taskArguments.blockchain][lending],
-    //         allowFailure: true,
-    //         callData: aaveV3.encodeFunctionData("getReservesData", [
-    //           MINTABLE_ERC20_TOKENS[taskArguments.blockchain][token],
-    //         ]),
-    //       });
-
-    //       aaveCalls.push({
-    //         target: lending.includes("3")
-    //           ? LENDING_POOLS[taskArguments.blockchain][
-    //               "AaveV3IncentivesController"
-    //             ]
-    //           : LENDING_POOLS[taskArguments.blockchain][
-    //               "AaveV2IncentivesController"
-    //             ],
-    //         allowFailure: true,
-    //         callData: aaveV3.encodeFunctionData("getAssetData", [
-    //           lending.includes("3")
-    //             ? AAVE_V3_A_TOKENS[taskArguments.blockchain][token]
-    //             : AAVE_V2_A_TOKENS[taskArguments.blockchain][token],
-    //         ]),
-    //       });
-
-    //       aaveCalls.push({
-    //         target: lending.includes("3")
-    //           ? LENDING_POOLS[taskArguments.blockchain][
-    //               "AaveV3IncentivesController"
-    //             ]
-    //           : LENDING_POOLS[taskArguments.blockchain][
-    //               "AaveV2IncentivesController"
-    //             ],
-    //         allowFailure: true,
-    //         callData: aaveV3.encodeFunctionData("getAssetData", [
-    //           lending.includes("3")
-    //             ? AAVE_V3_DEBT_TOKENS[taskArguments.blockchain][token]
-    //             : AAVE_V2_DEBT_TOKENS[taskArguments.blockchain][token],
-    //         ]),
-    //       });
-    //     }
-    //   }
-    // }
-    // const results = await multicall.aggregate3.staticCall(aaveCalls);
-    // let name = "";
-    // for (let i = 0; i < results.length; i++) {
-    //   const result = results[i];
-    //   if (result.success) {
-    //     if (i % 4 === 0) {
-    //       name = mockERC20
-    //         .decodeFunctionResult("name", result.returnData)
-    //         .toString();
-    //       walletStatus[name] = {};
-    //     }
-    //     if (i % 4 === 1) {
-    //       walletStatus[name]["decimals"] = mockERC20
-    //         .decodeFunctionResult("decimals", result.returnData)
-    //         .toString();
-    //     }
-    //     if (i % 4 === 2) {
-    //       walletStatus[name]["balance"] = mockERC20
-    //         .decodeFunctionResult("balanceOf", result.returnData)
-    //         .toString();
-    //     }
-    //     if (i % 4 === 3) {
-    //       walletStatus[name]["allowance"] =
-    //         i % 9 == 8
-    //           ? mockERC20
-    //               .decodeFunctionResult("borrowAllowance", result.returnData)
-    //               .toString()
-    //           : mockERC20
-    //               .decodeFunctionResult("allowance", result.returnData)
-    //               .toString();
-    //     }
-    //   }
-    // }
-
-    // spinner.start();
+    console.log(aaveV3IncentiveStatus);
 
     // const compV2Status: Record<string, Record<string, string>> = {};
 
