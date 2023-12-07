@@ -42,6 +42,9 @@ interface IDebtToken {
         bytes32 s
     )
         external;
+
+
+    function getTotalSupplyLastUpdated() external view returns (uint40);
 }
 
 interface IAToken {

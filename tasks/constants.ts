@@ -5,6 +5,17 @@ export const ETH_EE_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 
 export type AddressMap = { [blockchain: string]: string };
 export type TokenAmounts = { token: string; amount: string };
+export type RewardTokens = {
+  token: string;
+  tokenPrice: string;
+  tokenPriceDecimals: string;
+  APR: string;
+};
+export type APR = {
+  rewards: RewardTokens[];
+  totalAPR: string;
+};
+export const SECONDS_PER_YEAR = 31536000;
 
 export type TokenUnderlyingAddressMap = {
   [blockchain: string]: {
@@ -24,6 +35,7 @@ export type LendingMap = {
     AaveV3IncentivesController?: string;
     AaveV3AddressProvider: string;
     AaveV3UiPoolDataProvider: string;
+    AaveV3UiIncentiveDataProvider: string;
   };
 };
 export type RouterMap = {
@@ -81,6 +93,7 @@ export const LENDING_POOLS: LendingMap = {
     AaveV3IncentivesController: "0x4DA5c4da71C5a167171cC839487536d86e083483",
     AaveV3AddressProvider: "0x012bAC54348C0E635dCAc9D5FB99f06F24136C9A",
     AaveV3UiPoolDataProvider: "0x69529987FA4A075D0C00B0128fa848dc9ebbE9CE",
+    AaveV3UiIncentiveDataProvider: "0xBA25de9a7DC623B30799F33B770d31B44c2C3b77",
   },
 
   [`polygonMumbai`]: {
@@ -91,6 +104,7 @@ export const LENDING_POOLS: LendingMap = {
     AaveV3IncentivesController: "0xBcEF55508Efb890C71c8a6211B3dE02B00430503",
     AaveV3AddressProvider: "0x4CeDCB57Af02293231BAA9D39354D6BFDFD251e0",
     AaveV3UiPoolDataProvider: "0xD64dDe119f11C88850FD596BE11CE398CC5893e6",
+    AaveV3UiIncentiveDataProvider: "0x322bCff7b69F832B1a1F56E6BC600C9229CFb907",
   },
   [`avalancheFuji`]: {
     CompoundV2Comptroller: "0x0fEC306943Ec9766C1Da78C1E1b18c7fF23FE09e",
@@ -100,6 +114,7 @@ export const LENDING_POOLS: LendingMap = {
     AaveV3IncentivesController: "0x25f130Df328c8c2f2C0270377D0e7a984E96ce56",
     AaveV3AddressProvider: "0xfb87056c0587923f15EB0aABc7d0572450Cc8003",
     AaveV3UiPoolDataProvider: "0x279c790Afcd547e2f20d896c5DDEe3846b9790B5",
+    AaveV3UiIncentiveDataProvider: "0x279c790Afcd547e2f20d896c5DDEe3846b9790B5",
   },
 };
 

@@ -5,6 +5,9 @@ import {
   calculateAaveInterestRate,
   getPrivateKey,
   getProviderRpcUrl,
+  calculateCompoundedInterest,
+  rayMul,
+  calculateLinearInterest,
 } from "./utils";
 
 import {
@@ -15,6 +18,10 @@ import {
   LENDING_POOLS,
   MINTABLE_ERC20_TOKENS,
   multicall3Address,
+  APR,
+  RewardTokens,
+  SECONDS_PER_YEAR,
+  RAY,
 } from "./constants";
 import { Wallet, getBigInt } from "ethers";
 
@@ -25,6 +32,7 @@ import {
   CToken__factory,
   IUiIncentiveDataProviderV3,
   IUiPoolDataProviderV3__factory,
+  IUiIncentiveDataProviderV3__factory,
 } from "../typechain-types";
 import { Spinner } from "../utils/spinner";
 
@@ -49,12 +57,19 @@ task("lending-status", "Gets the balance of tokens for provided address")
       signer
     );
 
-    const aaveV3 = IPool__factory.createInterface();
+    const aaveV3IncentiveDataProvider =
+      IUiIncentiveDataProviderV3__factory.connect(
+        LENDING_POOLS[taskArguments.blockchain].AaveV3UiIncentiveDataProvider,
+        signer
+      );
+
     const itf = new ethers.Interface([
       "function decimals() view returns(uint8)",
       "function MAX_EXCESS_STABLE_TO_TOTAL_DEBT_RATIO() view returns(uint256)",
       "function OPTIMAL_STABLE_TO_TOTAL_DEBT_RATIO() view returns(uint256)",
       "function getStableRateExcessOffset() view returns(uint256)",
+      "function getTotalSupplyLastUpdated() view returns(uint40)",
+      "function scaledTotalSupply() view returns(uint256)",
     ]);
     const aaveV2PoolDataProvider = IPool__factory.createInterface();
     const compoundV2 = CToken__factory.createInterface();
@@ -63,12 +78,21 @@ task("lending-status", "Gets the balance of tokens for provided address")
       LENDING_POOLS[taskArguments.blockchain].AaveV3AddressProvider
     );
 
+    const aaveV3IncentiveData =
+      await aaveV3IncentiveDataProvider.getReservesIncentivesData(
+        LENDING_POOLS[taskArguments.blockchain].AaveV3AddressProvider
+      );
+
     const aaveV3Status: Record<string, Record<string, string>> = {};
     const aaveV3InterestCalls: Multicall3.Call3Struct[] = [];
+    const aaveV3IncentiveCalls: Multicall3.Call3Struct[] = [];
+
+    const TOKEN_ADDRESS_TO_NAME: Record<string, string> = {};
 
     /// unit in a ray=10**27
     aaveV3Data[0].forEach((element) => {
-      aaveV3Status[element.name.toString()] = {
+      const name = element.name.toString();
+      aaveV3Status[name] = {
         decimals: element.decimals.toString(),
         baseLTVasCollateral: element.baseLTVasCollateral.toString(),
         reserveLiquidationThreshold:
@@ -92,7 +116,10 @@ task("lending-status", "Gets the balance of tokens for provided address")
         unbacked: element.unbacked.toString(),
         liquidityIndex: element.liquidityIndex.toString(),
         price: element.priceInMarketReferenceCurrency.toString(),
-        liquidityRate2: element.liquidityRate.toString(),
+        liquidityRate: element.liquidityRate.toString(),
+        variableBorrowRate: element.variableBorrowRate.toString(),
+        stableBorrowRate: element.stableBorrowRate.toString(),
+        reserveLastUpdated: element.lastUpdateTimestamp.toString(),
       };
       // get price oracle decimals
       aaveV3InterestCalls.push({
@@ -117,21 +144,35 @@ task("lending-status", "Gets the balance of tokens for provided address")
         allowFailure: true,
         callData: itf.encodeFunctionData("getStableRateExcessOffset"),
       });
+      aaveV3InterestCalls.push({
+        target: element.stableDebtTokenAddress.toString(),
+        allowFailure: true,
+        callData: itf.encodeFunctionData("getTotalSupplyLastUpdated"),
+      });
+      aaveV3InterestCalls.push({
+        target: element.aTokenAddress.toString(),
+        allowFailure: true,
+        callData: itf.encodeFunctionData("scaledTotalSupply"),
+      });
+      TOKEN_ADDRESS_TO_NAME[element.underlyingAsset.toString()] = name;
     });
+
     const results = await multicall.aggregate3.staticCall(aaveV3InterestCalls);
 
     let idx = 0;
+
+    const time = Math.floor(new Date().getTime() / 1000);
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
       if (result.success) {
         const name = aaveV3Data[0][idx].name.toString();
 
-        if (i % 4 === 0) {
+        if (i % 6 === 0) {
           aaveV3Status[name]["priceOracleDecimals"] = itf
             .decodeFunctionResult("decimals", result.returnData)
             .toString();
         }
-        if (i % 4 === 1) {
+        if (i % 6 === 1) {
           aaveV3Status[name]["maxExcessStableToTotalDebtRatio"] = itf
             .decodeFunctionResult(
               "MAX_EXCESS_STABLE_TO_TOTAL_DEBT_RATIO",
@@ -139,7 +180,7 @@ task("lending-status", "Gets the balance of tokens for provided address")
             )
             .toString();
         }
-        if (i % 4 === 2) {
+        if (i % 6 === 2) {
           aaveV3Status[name]["optimalStableToTotalDebtRatio"] = itf
             .decodeFunctionResult(
               "OPTIMAL_STABLE_TO_TOTAL_DEBT_RATIO",
@@ -147,12 +188,26 @@ task("lending-status", "Gets the balance of tokens for provided address")
             )
             .toString();
         }
-        if (i % 4 === 3) {
+        if (i % 6 === 3) {
           aaveV3Status[name]["stableRateExcessOffset"] = itf
             .decodeFunctionResult(
               "getStableRateExcessOffset",
               result.returnData
             )
+            .toString();
+        }
+
+        if (i % 6 === 4) {
+          aaveV3Status[name]["stableTotalSupplyLastUpdated"] = itf
+            .decodeFunctionResult(
+              "getTotalSupplyLastUpdated",
+              result.returnData
+            )
+            .toString();
+        }
+        if (i % 6 === 5) {
+          aaveV3Status[name]["aTokenScaledTotalSupply"] = itf
+            .decodeFunctionResult("scaledTotalSupply", result.returnData)
             .toString();
           idx += 1;
         }
@@ -161,21 +216,58 @@ task("lending-status", "Gets the balance of tokens for provided address")
 
     aaveV3Data[0].forEach((element) => {
       const name = element.name.toString();
+      console.log(
+        "aTokenScaledTotalSupply: ",
+        aaveV3Status[name]["aTokenScaledTotalSupply"]
+      );
+
+      const totalLiquidity = rayMul(
+        getBigInt(aaveV3Status[name]["aTokenScaledTotalSupply"]),
+        rayMul(
+          calculateLinearInterest(
+            getBigInt(element.liquidityRate),
+            getBigInt(time),
+            getBigInt(aaveV3Status[name]["reserveLastUpdated"])
+          ),
+          getBigInt(element.liquidityIndex)
+        )
+      );
+
+      console.log("totalLiquidity: ", totalLiquidity.toString());
+      const totalVariableDebt = rayMul(
+        rayMul(
+          calculateCompoundedInterest(
+            getBigInt(element.variableBorrowRate),
+            getBigInt(time),
+            getBigInt(aaveV3Status[name]["reserveLastUpdated"])
+          ),
+          getBigInt(element.variableBorrowIndex)
+        ),
+        getBigInt(element.totalScaledVariableDebt)
+      );
+      const totalStableDebt = rayMul(
+        getBigInt(element.totalPrincipalStableDebt),
+        calculateCompoundedInterest(
+          getBigInt(element.averageStableRate),
+          getBigInt(time),
+          getBigInt(aaveV3Status[name]["stableTotalSupplyLastUpdated"])
+        )
+      );
 
       const interestRate = calculateAaveInterestRate(
-        getBigInt(element.totalPrincipalStableDebt),
-        getBigInt(element.totalScaledVariableDebt),
+        totalStableDebt,
+        totalVariableDebt,
         getBigInt(element.availableLiquidity),
         getBigInt(element.optimalUsageRatio),
-        getBigInt(aaveV3Status[name].optimalStableToTotalDebtRatio),
-        getBigInt(aaveV3Status[name].maxExcessStableToTotalDebtRatio),
+        getBigInt(aaveV3Status[name].optimalStableToTotalDebtRatio as string),
+        getBigInt(aaveV3Status[name].maxExcessStableToTotalDebtRatio as string),
         getBigInt(element.baseVariableBorrowRate),
         getBigInt(element.stableRateSlope1),
         getBigInt(element.stableRateSlope2),
         getBigInt(element.variableRateSlope1),
         getBigInt(element.variableRateSlope2),
         getBigInt(element.baseStableBorrowRate),
-        getBigInt(aaveV3Status[name].stableRateExcessOffset),
+        getBigInt(aaveV3Status[name].stableRateExcessOffset as string),
         getBigInt(element.reserveFactor),
         getBigInt(element.unbacked)
       );
@@ -191,6 +283,89 @@ task("lending-status", "Gets the balance of tokens for provided address")
     });
 
     console.log(aaveV3Status);
+
+    // const aaveV3IncentiveStatus: Record<string, APR> = {};
+
+    // aaveV3IncentiveData.forEach((element) => {
+    //   const name = TOKEN_ADDRESS_TO_NAME[element.underlyingAsset.toString()];
+    //   aaveV3IncentiveStatus[name] = { rewards: [], totalAPR: "0" };
+    //   let aTotalAPR = getBigInt(0);
+    //   element.aIncentiveData.rewardsTokenInformation.forEach(
+    //     (aIncentiveData) => {
+    //       const numerator =
+    //         getBigInt("1000000") *
+    //         getBigInt(SECONDS_PER_YEAR) *
+    //         getBigInt(aIncentiveData.emissionPerSecond) *
+    //         getBigInt(aIncentiveData.rewardPriceFeed) *
+    //         getBigInt(10) **
+    //           getBigInt(aaveV3Status[name]["priceOracleDecimals"]);
+
+    //       const denominator =
+    //         (getBigInt(aaveV3Status[name]["availableLiquidity"]) +
+    //           getBigInt(aaveV3Status[name]["totalPrincipalStableDebt"]) +
+    //           getBigInt(aaveV3Status[name]["totalScaledVariableDebt"])) *
+    //         getBigInt(aaveV3Status[name]["price"]) *
+    //         getBigInt(10) ** getBigInt(aIncentiveData.rewardTokenDecimals);
+
+    //       aaveV3IncentiveStatus[name]["rewards"].push({
+    //         token: aIncentiveData.rewardTokenSymbol,
+    //         tokenPrice: aIncentiveData.rewardPriceFeed.toString(),
+    //         tokenPriceDecimals: aIncentiveData.rewardTokenDecimals.toString(),
+    //         APR: (numerator / denominator).toString(),
+    //       });
+    //       aTotalAPR += numerator / denominator;
+    //     }
+    //   );
+    //   aaveV3IncentiveStatus[name]["totalAPR"] = aTotalAPR.toString();
+    //   let vTotalAPR = getBigInt(0);
+    //   element.vIncentiveData.rewardsTokenInformation.forEach(
+    //     (vIncentiveData) => {
+    //       const numerator =
+    //         getBigInt("1000000") *
+    //         getBigInt(SECONDS_PER_YEAR) *
+    //         getBigInt(vIncentiveData.emissionPerSecond) *
+    //         getBigInt(vIncentiveData.rewardPriceFeed) *
+    //         getBigInt(10) **
+    //           getBigInt(aaveV3Status[name]["priceOracleDecimals"]);
+
+    //       const denominator =
+    //         getBigInt(aaveV3Status[name]["totalScaledVariableDebt"]) *
+    //         getBigInt(aaveV3Status[name]["price"]) *
+    //         getBigInt(10) ** getBigInt(vIncentiveData.rewardTokenDecimals);
+
+    //       aaveV3IncentiveStatus[name]["rewards"].push({
+    //         token: vIncentiveData.rewardTokenSymbol,
+    //         tokenPrice: vIncentiveData.rewardPriceFeed.toString(),
+    //         tokenPriceDecimals: vIncentiveData.rewardTokenDecimals.toString(),
+    //         APR: (numerator / denominator).toString(),
+    //       });
+    //       aTotalAPR += numerator / denominator;
+    //     }
+    //   );
+    // });
+
+    // console.log(aaveV3Status);
+    // aaveV3IncentiveCalls;
+
+    // Deposit and Borrow calculations
+    // APY and APR are returned here as decimals, multiply by 100 to get the percents
+
+    // depositAPR = liquidityRate / RAY;
+    // variableBorrowAPR = variableBorrowRate / RAY;
+    // stableBorrowAPR = variableBorrowRate / RAY;
+
+    // WEI_DECIMALS = 10 ** 18; // All emissions are in wei units, 18 decimal places
+
+    // UNDERLYING_TOKEN_DECIMALS will be the decimals of token underlying the aToken or debtToken
+    // For Example, UNDERLYING_TOKEN_DECIMALS for aUSDC will be 10**6 because USDC has 6 decimals
+
+    // incentiveDepositAPRPercent =
+    //   (100 * (aEmissionPerYear * REWARD_PRICE_ETH * WEI_DECIMALS)) /
+    //   (totalATokenSupply * TOKEN_PRICE_ETH * UNDERLYING_TOKEN_DECIMALS);
+
+    // incentiveBorrowAPRPercent =
+    //   (100 * (vEmissionPerYear * REWARD_PRICE_ETH * WEI_DECIMALS)) /
+    //   (totalCurrentVariableDebt * TOKEN_PRICE_ETH * UNDERLYING_TOKEN_DECIMALS);
 
     // for (const lending in LENDING_POOLS[taskArguments.blockchain]) {
     //   if (lending.includes("AAVE")) {

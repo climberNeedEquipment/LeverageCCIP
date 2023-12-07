@@ -4,6 +4,7 @@ import {
   RAY,
   WAD_RAY_RATIO,
   PERCENTAGE_FACTOR,
+  SECONDS_PER_YEAR,
 } from "./constants";
 
 import {
@@ -187,6 +188,53 @@ function percentMul(value: bigint, percentage: bigint) {
   );
 }
 
+export function calculateLinearInterest(
+  rate: bigint,
+  currentTimestamp: bigint,
+  lastUpdateTimestamp: bigint
+): bigint {
+  const timeDelta = currentTimestamp - lastUpdateTimestamp;
+
+  return getBigInt(RAY) + (rate * timeDelta) / getBigInt(SECONDS_PER_YEAR);
+}
+
+export function calculateCompoundedInterest(
+  rate: bigint,
+  currentTimestamp: bigint,
+  lastUpdateTimestamp: bigint
+): bigint {
+  const timeDelta = currentTimestamp - lastUpdateTimestamp;
+  if (timeDelta === getBigInt(0)) return getBigInt(RAY);
+  let expMinusOne: bigint;
+  let expMinusTwo: bigint;
+  let basePowerTwo: bigint;
+  let basePowerThree: bigint;
+
+  expMinusOne = timeDelta - getBigInt(1);
+
+  expMinusTwo =
+    timeDelta > getBigInt(2) ? timeDelta - getBigInt(2) : getBigInt(0);
+
+  basePowerTwo =
+    rayMul(rate, rate) /
+    (getBigInt(SECONDS_PER_YEAR) * BigInt(SECONDS_PER_YEAR));
+  basePowerThree = rayMul(basePowerTwo, rate) / getBigInt(SECONDS_PER_YEAR);
+
+  let secondTerm: bigint = timeDelta * expMinusOne * basePowerTwo;
+  secondTerm /= 2n;
+
+  let thirdTerm: bigint =
+    timeDelta * expMinusOne * expMinusTwo * basePowerThree;
+  thirdTerm /= 6n;
+
+  return (
+    getBigInt(RAY) +
+    (rate * timeDelta) / getBigInt(SECONDS_PER_YEAR) +
+    secondTerm +
+    thirdTerm
+  );
+}
+
 export function calculateAaveInterestRate(
   totalStableDebt: bigint,
   totalVariableDebt: bigint,
@@ -212,6 +260,11 @@ export function calculateAaveInterestRate(
   const totalBorrow = totalStableDebt + totalVariableDebt;
 
   const totalLiquidity = availableLiquidity + totalBorrow;
+
+  console.log("availableLiquidity", availableLiquidity);
+  console.log("totalStableDebt", totalStableDebt);
+  console.log("totalVariableDebt", totalVariableDebt);
+
   let borrowUsageRatio = getBigInt(0);
   let supplyUsageRatio = getBigInt(0);
 
@@ -223,6 +276,8 @@ export function calculateAaveInterestRate(
     borrowUsageRatio = rayDiv(totalBorrow, totalLiquidity);
     supplyUsageRatio = rayDiv(totalBorrow, totalLiquidity + unbacked);
   }
+
+  console.log("borrowUsageRatio", borrowUsageRatio);
 
   if (borrowUsageRatio > optimalUtilization) {
     const excessBorrowUsageRatio = rayDiv(
@@ -276,6 +331,94 @@ export function calculateAaveInterestRate(
   };
 }
 
-export function calculateFlashloanLeverage() {
-  // TODO
+export function calculateLeverage(
+  supplyAmt: bigint,
+  suppliedAmt: bigint,
+  currentLTV: bigint,
+  targetLTV: bigint,
+  priceBorrow: bigint,
+  priceSupplyExchangeRate: bigint, // ray expressions
+  flashloanFeePremium: bigint // precision 10000
+) {
+  const numerator =
+    (supplyAmt + suppliedAmt) * (getBigInt(10000) + flashloanFeePremium) -
+    suppliedAmt * priceBorrow * currentLTV;
+
+  let denominator =
+    getBigInt(10000) +
+    flashloanFeePremium -
+    targetLTV * priceBorrow * priceSupplyExchangeRate;
+
+  if (suppliedAmt === getBigInt(0)) {
+    denominator *= suppliedAmt;
+  } else {
+    denominator *= supplyAmt;
+  }
+
+  return { leverage: numerator / denominator };
+}
+
+export function calculateFlashloanLeverageBaseAmount(
+  supplyAmt: bigint,
+  suppliedAmt: bigint,
+  currentLTV: bigint, // precision 10000
+  targetLTV: bigint, // precision 10000
+  priceBorrow: bigint,
+  priceSupplyExchangeRate: bigint, // ray expressions
+  flashloanFeePremium: bigint // precision 10000
+): { flashloanAmount: bigint } {
+  const numerator =
+    suppliedAmt * priceBorrow * (targetLTV - currentLTV) * getBigInt(RAY) +
+    supplyAmt * targetLTV * priceBorrow * priceSupplyExchangeRate;
+
+  const denominator =
+    (getBigInt(10000) + flashloanFeePremium) * getBigInt(RAY) -
+    targetLTV * priceBorrow * priceSupplyExchangeRate;
+
+  return { flashloanAmount: numerator / denominator };
+}
+
+export function calculateFlashloanLeverageQuoteAmount(
+  supplyAmt: bigint,
+  suppliedAmt: bigint,
+  currentLTV: bigint, // precision 10000
+  targetLTV: bigint, // precision 10000
+  priceBorrow: bigint,
+  priceSupplyExchangeRate: bigint, // ray expressions
+  flashloanFeePremium: bigint // precision 10000
+): { flashloanAmount: bigint } {
+  const numerator =
+    (suppliedAmt * (targetLTV - currentLTV) + supplyAmt * currentLTV) *
+    priceBorrow;
+
+  const denominator =
+    (getBigInt(10000) + flashloanFeePremium) * getBigInt(RAY) -
+    targetLTV * priceBorrow * priceSupplyExchangeRate;
+
+  return { flashloanAmount: numerator / denominator };
+}
+
+export function calculateFlashloanDeleverage(
+  supplyAmt: bigint,
+  suppliedAmt: bigint,
+  currentLTV: bigint,
+  targetLTV: bigint,
+  priceBorrow: bigint,
+  priceBorrowExchangeRate: bigint, // ray expressions
+  flashloanFeePremium: bigint // precision 10000
+) {
+  const numerator =
+    priceBorrow *
+    priceBorrowExchangeRate *
+    suppliedAmt *
+    (currentLTV - targetLTV) *
+    getBigInt(RAY);
+
+  const denominator =
+    priceBorrowExchangeRate * getBigInt(RAY) * getBigInt(10000) -
+    (getBigInt(10000) + flashloanFeePremium) *
+      targetLTV *
+      priceBorrow *
+      getBigInt(RAY);
+  return { flashloanAmount: numerator / denominator };
 }
