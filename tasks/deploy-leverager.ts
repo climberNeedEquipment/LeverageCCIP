@@ -51,7 +51,7 @@ task(`deploy-leverager`, `Deploys Leverager.sol smart contract`)
       // await deployer.deploy(id("lever-ez"), multicall3_bytecode);
 
       await deployer.deploy(
-        id("lever-ez"),
+        id("lever_ez"),
         leverage_bytecode +
           deployer.encoder(
             ["address", "address", "address", "address"],

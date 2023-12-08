@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 import { TaskArguments } from "hardhat/types";
-import { ethers } from "ethers";
+import { AddressLike, ethers } from "ethers";
 import {
   calculateAaveInterestRate,
   getPrivateKey,
@@ -16,9 +16,7 @@ import {
 
 import {
   AAVE_V3_A_TOKENS,
-  AAVE_V2_A_TOKENS,
   AAVE_V3_DEBT_TOKENS,
-  AAVE_V2_DEBT_TOKENS,
   LENDING_POOLS,
   MINTABLE_ERC20_TOKENS,
   multicall3Address,
@@ -27,6 +25,7 @@ import {
   SECONDS_PER_YEAR,
   RAY,
   MAX_UINT256,
+  leveragerAddress,
 } from "./constants";
 import { Wallet, getBigInt } from "ethers";
 
@@ -38,8 +37,44 @@ import {
   IUiIncentiveDataProviderV3,
   IUiPoolDataProviderV3__factory,
   IUiIncentiveDataProviderV3__factory,
+  MockERC20__factory,
 } from "../typechain-types";
 import { Spinner } from "../utils/spinner";
+type SupplyProps = {
+  revenueEstimation: string;
+  compoundGovernanceToken: string;
+  supplyAmount: string;
+  borrowAmount: string;
+  supplyAPR: string;
+  borrowAPR: string;
+};
+
+type WithdrawProps = {
+  amountSupplied: string;
+  amountBorrowed: string;
+  supplyAPR: string;
+  rewardAPR: string;
+  borrowUsedRatio: number; // value between 0~1
+  borrowAmount: string;
+};
+
+type CloseProps = {
+  currentLTV: string;
+  targetLTV: string;
+  supplyAmount: string;
+  borrowAmount: string;
+  borrowAPR: string;
+  rewardAPR: string;
+};
+
+type BorrowProps = {
+  APR: string;
+  governanceAPR: string;
+  supplyAmount: string;
+  borrowAmount: string;
+  borrowAPR: string;
+  rewardAPR: string;
+};
 
 task("lending-status", "Gets the balance of tokens for provided address")
   .addParam(`blockchain`, `The blockchain where to check`)
@@ -225,10 +260,6 @@ task("lending-status", "Gets the balance of tokens for provided address")
 
     aaveV3Data[0].forEach((element) => {
       const name = element.name.toString();
-      console.log(
-        "aTokenScaledTotalSupply: ",
-        aaveV3Status[name]["aTokenScaledTotalSupply"]
-      );
 
       const totalATokenSupply = rayMul(
         getBigInt(aaveV3Status[name]["aTokenScaledTotalSupply"]),
@@ -300,7 +331,11 @@ task("lending-status", "Gets the balance of tokens for provided address")
 
     aaveV3IncentiveData.forEach((element) => {
       const name = TOKEN_ADDRESS_TO_NAME[element.underlyingAsset.toString()];
-      aaveV3IncentiveStatus[name] = { rewards: [], totalAPR: "0" };
+      aaveV3IncentiveStatus[name] = {
+        rewards: [],
+        aTotalAPR: "0",
+        vTotalAPR: "0",
+      };
       let aTotalAPR = getBigInt(0);
       element.aIncentiveData.rewardsTokenInformation.forEach(
         (aIncentiveData) => {
@@ -322,12 +357,13 @@ task("lending-status", "Gets the balance of tokens for provided address")
             token: aIncentiveData.rewardTokenSymbol,
             tokenPrice: aIncentiveData.rewardPriceFeed.toString(),
             tokenPriceDecimals: aIncentiveData.rewardTokenDecimals.toString(),
+            isAToken: true,
             APR: (numerator / denominator).toString(),
           });
           aTotalAPR += numerator / denominator;
         }
       );
-      aaveV3IncentiveStatus[name]["totalAPR"] = aTotalAPR.toString();
+      aaveV3IncentiveStatus[name]["aTotalAPR"] = aTotalAPR.toString();
       let vTotalAPR = getBigInt(0);
       element.vIncentiveData.rewardsTokenInformation.forEach(
         (vIncentiveData) => {
@@ -349,11 +385,13 @@ task("lending-status", "Gets the balance of tokens for provided address")
             token: vIncentiveData.rewardTokenSymbol,
             tokenPrice: vIncentiveData.rewardPriceFeed.toString(),
             tokenPriceDecimals: vIncentiveData.rewardTokenDecimals.toString(),
+            isAToken: false,
             APR: (numerator / denominator).toString(),
           });
           vTotalAPR += numerator / denominator;
         }
       );
+      aaveV3IncentiveStatus[name]["vTotalAPR"] = vTotalAPR.toString();
     });
     console.log(aaveV3IncentiveStatus);
 
@@ -376,7 +414,6 @@ task("lending-status", "Gets the balance of tokens for provided address")
     console.log(aaveV3AccountNetStatus);
 
     const aaveFloatStatus: Record<string, Record<string, string | number>> = {};
-    console.log();
     for (const name of Object.keys(aaveV3Status)) {
       const element = aaveV3Status[name];
       aaveFloatStatus[name] = {};
@@ -395,14 +432,6 @@ task("lending-status", "Gets the balance of tokens for provided address")
         ).toString()
       );
 
-      const borrowAmtUSD =
-        (((parseFloat(aaveV3AccountNetStatus.totalCollateralBase) -
-          parseFloat(aaveV3AccountNetStatus.totalDebtBase)) /
-          baseDecimals) *
-          parseFloat(aaveV3AccountNetStatus.ltv)) /
-        10000;
-
-      console.log(borrowAmtUSD);
       aaveFloatStatus[name]["maxLTV"] =
         parseFloat(element.baseLTVasCollateral) / 100;
 
@@ -483,17 +512,93 @@ task("lending-status", "Gets the balance of tokens for provided address")
         aaveFloatStatus["user"]["totalCollateralUSD"]) *
       100;
 
-    console.log(
-      "target ltv",
-      calculateFlashloanLeverageToTargetLTV(1, 1, 1, 2, 2, 0.5, 0)
+    console.log(aaveFloatStatus);
+
+    const balances = await walletStatus(signer, taskArguments.blockchain);
+
+    console.log(balances);
+
+    let leverage = 2;
+    let inputAmount = 0;
+    let token = "DAI";
+
+    const aToken = "a" + token;
+    const vToken = "v" + token;
+
+    const supplyAmount = getFloatValueDivDecimals(
+      balances[aToken]["balance"],
+      balances[aToken]["decimals"]
+    );
+    const borrowAmount = getFloatValueDivDecimals(
+      balances[vToken]["balance"],
+      balances[vToken]["decimals"]
     );
 
-    console.log(
-      "aave flashloan amount",
-      calculateFlashloanLeverageBaseAmount(2, 2, 0, 0.5, 2, 1 / 2, 0),
-
-      calculateFlashloanLeverageQuoteAmount(2, 4, 0, 0.5, 2, 1 / 2, 0)
+    const { targetLTV } = calculateFlashloanLeverageToTargetLTV(
+      inputAmount,
+      supplyAmount,
+      borrowAmount,
+      leverage,
+      1,
+      1,
+      0.001
     );
+
+    const { flashloanAmount } = calculateFlashloanLeverageBaseAmount(
+      inputAmount,
+      supplyAmount,
+      borrowAmount / supplyAmount,
+      targetLTV,
+      1,
+      1,
+      0.001
+    );
+    console.log(targetLTV);
+    console.log(flashloanAmount);
+    console.log(supplyAmount);
+
+    const revenueEstimation =
+      (inputAmount + supplyAmount + flashloanAmount) *
+        (aaveFloatStatus[token]["supplyAPR"] as number) -
+      (targetLTV * (aaveFloatStatus[token]["variableBorrowAPR"] as number)) /
+        100;
+    let compoundGovernanceToken = 0;
+    aaveV3IncentiveStatus[token]["rewards"].forEach((reward) => {
+      if (reward.token !== "AAVE") {
+        return;
+      }
+      const rewardTokenPrice = getFloatValueDivDecimals(
+        reward.tokenPrice,
+        reward.tokenPriceDecimals
+      );
+      const rewardAPR = getFloatValueDivDecimals(reward.APR, "6");
+
+      if (reward.isAToken) {
+        compoundGovernanceToken +=
+          (rewardAPR *
+            (inputAmount + supplyAmount + flashloanAmount) *
+            (aaveFloatStatus[token].price as number)) /
+          rewardTokenPrice;
+      } else {
+        compoundGovernanceToken +=
+          (rewardAPR *
+            (inputAmount + supplyAmount + flashloanAmount) *
+            targetLTV *
+            (aaveFloatStatus[token].price as number)) /
+          rewardTokenPrice;
+      }
+    });
+
+    const supplyProps: SupplyProps = {
+      revenueEstimation: revenueEstimation.toString(),
+      compoundGovernanceToken: compoundGovernanceToken.toString(),
+      supplyAmount: supplyAmount.toString(),
+      borrowAmount: borrowAmount.toString(),
+      supplyAPR: aaveFloatStatus[token]["supplyAPR"].toString(),
+      borrowAPR: aaveFloatStatus[token]["variableBorrowAPR"].toString(),
+    };
+
+    console.log(supplyProps);
 
     // const compV2Status: Record<string, Record<string, string>> = {};
 
@@ -574,3 +679,164 @@ task("lending-status", "Gets the balance of tokens for provided address")
     //   } account is ${BigInt(balanceOf)}`
     // );
   });
+
+function getFloatValueDivDecimals(value: string, decimals: string) {
+  return (
+    parseFloat(value) /
+    parseFloat((getBigInt(10) ** getBigInt(decimals)).toString())
+  );
+}
+async function walletStatus(
+  signer: Wallet,
+  blockchain: "ethereumSepolia" | "avalancheFuji" | "polygonMumbai"
+) {
+  const multicall: Multicall3 = Multicall3__factory.connect(
+    multicall3Address,
+    signer
+  );
+
+  const mockERC20 = MockERC20__factory.createInterface();
+  const calls: Multicall3.Call3Struct[] = [];
+
+  const tokens = ["DAI", "USDC", "USDT", "WBTC", "WETH"] as const;
+  tokens.forEach((token) => {
+    calls.push({
+      target: MINTABLE_ERC20_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("name"),
+    });
+    calls.push({
+      target: MINTABLE_ERC20_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("decimals"),
+    });
+    calls.push({
+      target: MINTABLE_ERC20_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("balanceOf", [signer.address]),
+    });
+
+    calls.push({
+      target: MINTABLE_ERC20_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("allowance", [
+        signer.address,
+        leveragerAddress[blockchain],
+      ]),
+    });
+    calls.push({
+      target: AAVE_V3_A_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("name"),
+    });
+    calls.push({
+      target: AAVE_V3_A_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("decimals"),
+    });
+    calls.push({
+      target: AAVE_V3_A_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("balanceOf", [signer.address]),
+    });
+    calls.push({
+      target: AAVE_V3_A_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("allowance", [
+        signer.address,
+        leveragerAddress[blockchain],
+      ]),
+    });
+    calls.push({
+      target: AAVE_V3_DEBT_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("name"),
+    });
+    calls.push({
+      target: AAVE_V3_DEBT_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("decimals"),
+    });
+    calls.push({
+      target: AAVE_V3_DEBT_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("balanceOf", [signer.address]),
+    });
+    calls.push({
+      target: AAVE_V3_DEBT_TOKENS[blockchain][token],
+      allowFailure: true,
+      callData: mockERC20.encodeFunctionData("borrowAllowance", [
+        signer.address,
+        leveragerAddress[blockchain],
+      ]),
+    });
+  });
+
+  const results = await multicall.aggregate3.staticCall(calls);
+
+  const walletStatus: Record<string, Record<string, string>> = {};
+
+  let name = "";
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.success) {
+      if (i % 4 === 0) {
+        if (i % 12 === 0) {
+          name = mockERC20
+            .decodeFunctionResult("name", result.returnData)
+            .toString();
+        } else if (i % 12 === 4) {
+          name =
+            "a" +
+            mockERC20
+              .decodeFunctionResult("name", result.returnData)
+              .toString()
+              .split(" ")
+              .slice(-1)
+              .pop();
+        } else {
+          name =
+            "v" +
+            mockERC20
+              .decodeFunctionResult("name", result.returnData)
+              .toString()
+              .split(" ")
+              .slice(-1)
+              .pop();
+        }
+        walletStatus[name] = {};
+      }
+      if (i % 4 === 1) {
+        walletStatus[name]["decimals"] = mockERC20
+          .decodeFunctionResult("decimals", result.returnData)
+          .toString();
+      }
+      if (i % 4 === 2) {
+        walletStatus[name]["balance"] = mockERC20
+          .decodeFunctionResult("balanceOf", result.returnData)
+          .toString();
+      }
+      if (i % 4 === 3) {
+        walletStatus[name]["allowance"] =
+          i % 9 == 8
+            ? mockERC20
+                .decodeFunctionResult("borrowAllowance", result.returnData)
+                .toString()
+            : mockERC20
+                .decodeFunctionResult("allowance", result.returnData)
+                .toString();
+      }
+    }
+  }
+
+  walletStatus["NATIVE"] = {};
+  walletStatus["NATIVE"]["decimals"] = "18";
+
+  const provider = signer.provider;
+  if (!provider) throw new Error("Provider not found");
+  walletStatus["NATIVE"]["balance"] = (
+    await provider.getBalance(signer.address)
+  ).toString();
+
+  return walletStatus;
+}

@@ -32,7 +32,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     address public immutable vault;
     address public immutable WETH9;
     address public  immutable i_link;
-    mapping(uint64 => address) public dstToLeverager;
+    mapping(uint64 => address) public dstToPropagator;
     Propagator public immutable propagator;
 
     // flags is 3bits expression
@@ -75,6 +75,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     /* ========== EVENT ========== */
     event Supply(address indexed user, address indexed token, uint256 amount);
     event Withdraw(address indexed user, address indexed token, uint256 amount);
+    event Borrow(address indexed user, address indexed token, uint256 amount);
     event Leverage(address indexed user, address indexed token, uint256 amount, uint256 ltv);
     event Deleverage(address indexed user, address indexed token, uint256 amount, uint256 ltv);
     event Close(address indexed user, uint256 srcChainId, uint256 dstChainId, uint256 amount, uint256 ltv);
@@ -110,8 +111,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
     receive() external payable { }
 
-    function addDstChain(uint64 destChainSelector, address leverager) external onlyOwner {
-        dstToLeverager[destChainSelector]=leverager;
+    function addDstChainPropagator(uint64 destChainSelector, address _propagator) external onlyOwner {
+        dstToPropagator[destChainSelector]=_propagator;
     }
 
     /// @inheritdoc ILeverager
@@ -133,12 +134,14 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         }
         returnAmount = inputParams.counterAsset.balanceOf(msg.sender);
 
+        uint256 flashloanAmount;
         if (inputParams.data.length == 0) {
             if (inputParams.flags & 0x1 == 0) {
                 _compV2Supply(inputParams.asset.isETH(), inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
             } else {
                 _aaveSupply(inputParams.asset.isETH(), inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
             }
+
         } else {
             Cache memory cache;
 
@@ -156,7 +159,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             /// modes are all 0 -> no borrowing
             cache.assets[0] = inputParams.flags & 0x4 == 0 ? cache.borrowAssetUnderlying : inputParams.asset;
             if (cache.assets[0].isETH()) cache.assets[0] = WETH9;
-
+            flashloanAmount=cache.flashloanAmount;  
             cache.amounts[0] = cache.flashloanAmount;
 
             IPool(vault).flashLoan(
@@ -185,8 +188,12 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             /// Sweep the dust
             _sweep(inputParams.asset);
             _sweep(cache.borrowAssetUnderlying);
+
         }
         returnAmount = inputParams.counterAsset.balanceOf(msg.sender) - returnAmount;
+        emit Supply(msg.sender, inputParams.asset,  inputParams.amount+flashloanAmount);
+
+    
     }
     /// @inheritdoc ILeverager
 
@@ -203,6 +210,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         } else {
             returnAmount = _aaveWithdraw(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
         }
+        emit Withdraw(msg.sender, inputParams.asset, inputParams.amount);
+    
     }
 
     /// @inheritdoc ILeverager
@@ -225,6 +234,10 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         }
         /// Sweep the assets which are borrowed
         returnAmount=_sweep(inputParams.asset);
+
+        emit Borrow(msg.sender, inputParams.asset, inputParams.amount);
+
+
     }
     /// @inheritdoc ILeverager
     function close(
@@ -262,6 +275,10 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             cache.data=inputParams.data;
             _decreasePosition(cache);
         }
+
+                event Leverage(address indexed user, address indexed token, uint256 amount, uint256 ltv);
+    event Deleverage(address indexed user, address indexed token, uint256 amount, uint256 ltv);
+    emit Close(msg.sender, uint256 srcChainId, uint256 dstChainId, inputParams.amount, uint256 ltv);
     }
 
     /**
@@ -419,6 +436,9 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         } else {
             CNative(supplyToken).mint{ value: amount }();
         }
+        if (onBehalfOf != address(this)) {
+            supplyToken.uniTransfer(payable(onBehalfOf), supplyToken.uniBalanceOf(address(this)));
+        }
     }
 
     function _compV2Withdraw(
@@ -529,7 +549,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             Client.EVM2AnyMessage[] memory messages =new Client.EVM2AnyMessage[](destChainSelectors.length);
             for (uint256 i; i<destChainSelectors.length; i++){
                 Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-                    receiver: abi.encode(dstToLeverager[destChainSelectors[i]]),
+                    receiver: abi.encode(dstToPropagator[destChainSelectors[i]]),
                     data: abi.encode(msg.sender, cache.asset, cache.supplyToken, cache.flags, msgsData),
                     tokenAmounts: new Client.EVMTokenAmount[](0),
                     extraArgs: "",
@@ -656,7 +676,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         Client.Any2EVMMessage memory message
     ) internal override {
         address sender= abi.decode(message.sender, (address));
-        if(address(propagator)!=sender){
+        if(dstToPropagator[message.sourceChainSelector]!=sender){
             revert SenderNotAllowlisted(sender);
         }
 

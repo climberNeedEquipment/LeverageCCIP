@@ -38,7 +38,8 @@ task("balance-of", "Gets the balance of tokens for provided address")
     const mockERC20 = MockERC20__factory.createInterface();
     const calls: Multicall3.Call3Struct[] = [];
 
-    for (const token in MINTABLE_ERC20_TOKENS[taskArguments.blockchain]) {
+    const tokens = ["DAI", "USDC", "USDT", "WBTC", "WETH"] as const;
+    tokens.forEach((token) => {
       calls.push({
         target: MINTABLE_ERC20_TOKENS[taskArguments.blockchain][token],
         allowFailure: true,
@@ -109,7 +110,7 @@ task("balance-of", "Gets the balance of tokens for provided address")
           leveragerAddress[taskArguments.blockchain],
         ]),
       });
-    }
+    });
 
     spinner.start();
 
