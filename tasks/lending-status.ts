@@ -56,6 +56,7 @@ type WithdrawProps = {
   rewardAPR: string;
   utilizationRate: number; // value between 0~100 %
   withdrawableAmount: string;
+  totalSupplyUSD: string;
 };
 
 type CloseProps = {
@@ -494,6 +495,7 @@ task("lending-status", "Gets the balance of tokens for provided address")
         getBigInt(10) ** getBigInt(aaveV3AccountNetStatus.baseDecimals)
       ).toString()
     );
+
     aaveFloatStatus["user"]["totalCollateralUSD"] =
       parseFloat(aaveV3AccountNetStatus.totalCollateralBase) / baseDecimals;
 
@@ -623,6 +625,7 @@ task("lending-status", "Gets the balance of tokens for provided address")
       supplyAPR: aaveFloatStatus[token]["supplyAPR"].toString(),
       rewardAPR: supplyRewardAPR.toString(),
       withdrawableAmount: withdrawableAmount.toString(),
+      totalSupplyUSD: aaveFloatStatus[token]["totalSupplyUSD"].toString(),
     };
 
     console.log(withdrawProps);

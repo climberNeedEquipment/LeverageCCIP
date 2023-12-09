@@ -104,11 +104,12 @@ Infura provides **0.5 ETHSepolia per day** if you have the accounts.
 
 Alchemy provides **0.5 ETHSepolia 0.5 Mumbai Matic per day**.
 
+Chainlink provides **20 LINK token per day in each chain**.
+
 [Sepolia](https://www.infura.io/faucet/sepolia)
-
 [Mumbai](https://mumbaifaucet.com/)
-
 [Fuji](https://faucet.quicknode.com/avalanche/fuji)
+[Chainlink](https://faucets.chain.link/sepolia)
 
 ![Aave](./img/aave-faucet.png)
 [Aave](https://app.aave.com/faucet/) provides the mintable ERC20 tokens for testnet environments.
