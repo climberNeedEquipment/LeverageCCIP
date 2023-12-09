@@ -118,7 +118,13 @@ Due to transferring the tokens, depositing as a collaterals and borrowing on beh
 To minimize the complexity of contracts for the hackathons, we assumed the users like this
 
 - Who has already supplied to the aaveV2/V3 lending pools before and hasn't disabled the assets as collaterals.
-- Who has
+- Who supplies and borrows(leverages) int the same assets.
+
+### Get Info
+
+```shell
+npx hardhat lending-status  --blockchain ethereumSepolia
+```
 
 ### Deployment
 

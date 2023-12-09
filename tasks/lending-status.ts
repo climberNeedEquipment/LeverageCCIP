@@ -553,9 +553,6 @@ task("lending-status", "Gets the balance of tokens for provided address")
       1,
       0.001
     );
-    console.log(targetLTV);
-    console.log(flashloanAmount);
-    console.log(supplyAmount);
 
     const revenueEstimation =
       (inputAmount + supplyAmount + flashloanAmount) *
