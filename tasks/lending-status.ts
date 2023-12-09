@@ -8,7 +8,7 @@ import {
   calculateCompoundedInterest,
   rayMul,
   calculateLinearInterest,
-  calculateLeverage,
+  calculateFlashloanDeleverageBaseAmount,
   calculateFlashloanLeverageBaseAmount,
   calculateFlashloanLeverageToTargetLTV,
   calculateFlashloanLeverageQuoteAmount,
@@ -50,17 +50,16 @@ type SupplyProps = {
 };
 
 type WithdrawProps = {
-  amountSupplied: string;
-  amountBorrowed: string;
+  supplyAmount: string;
+  borrowAmount: string;
   supplyAPR: string;
   rewardAPR: string;
-  borrowUsedRatio: number; // value between 0~1
-  borrowAmount: string;
+  utilizationRate: number; // value between 0~100 %
+  withdrawableAmount: string;
 };
 
 type CloseProps = {
   currentLTV: string;
-  targetLTV: string;
   supplyAmount: string;
   borrowAmount: string;
   borrowAPR: string;
@@ -68,12 +67,17 @@ type CloseProps = {
 };
 
 type BorrowProps = {
-  APR: string;
-  governanceAPR: string;
+  netAPR: string;
+  availableLiquidity: string;
+  utilizationRate: number; // value between 0~100 %
   supplyAmount: string;
   borrowAmount: string;
   borrowAPR: string;
   rewardAPR: string;
+  borrowableAmount: string;
+  currentLTV: string;
+  maxLTV: string;
+  afterLTV: string;
 };
 
 task("lending-status", "Gets the balance of tokens for provided address")
@@ -468,11 +472,14 @@ task("lending-status", "Gets the balance of tokens for provided address")
         (aaveFloatStatus[name]["totalBorrow"] as number) *
         (aaveFloatStatus[name]["price"] as number);
 
+      aaveFloatStatus[name]["availableLiquidity"] =
+        parseFloat(element["availableLiquidity"]) /
+        parseFloat(
+          (getBigInt(10) ** getBigInt(element["decimals"])).toString()
+        );
+
       aaveFloatStatus[name]["availableLiquidityUSD"] =
-        (parseFloat(element["availableLiquidity"]) /
-          parseFloat(
-            (getBigInt(10) ** getBigInt(element["decimals"])).toString()
-          )) *
+        (aaveFloatStatus[name]["availableLiquidity"] as number) *
         (aaveFloatStatus[name]["price"] as number);
 
       aaveFloatStatus[name]["utilizationRate"] =
@@ -560,6 +567,8 @@ task("lending-status", "Gets the balance of tokens for provided address")
       (targetLTV * (aaveFloatStatus[token]["variableBorrowAPR"] as number)) /
         100;
     let compoundGovernanceToken = 0;
+    let supplyRewardAPR = 0;
+    let borrowRewardAPR = 0;
     aaveV3IncentiveStatus[token]["rewards"].forEach((reward) => {
       if (reward.token !== "AAVE") {
         return;
@@ -571,12 +580,14 @@ task("lending-status", "Gets the balance of tokens for provided address")
       const rewardAPR = getFloatValueDivDecimals(reward.APR, "6");
 
       if (reward.isAToken) {
+        supplyRewardAPR += rewardAPR;
         compoundGovernanceToken +=
           (rewardAPR *
             (inputAmount + supplyAmount + flashloanAmount) *
             (aaveFloatStatus[token].price as number)) /
           rewardTokenPrice;
       } else {
+        borrowRewardAPR += rewardAPR;
         compoundGovernanceToken +=
           (rewardAPR *
             (inputAmount + supplyAmount + flashloanAmount) *
@@ -596,6 +607,81 @@ task("lending-status", "Gets the balance of tokens for provided address")
     };
 
     console.log(supplyProps);
+
+    const withdrawableAmount = Math.min(
+      (aaveFloatStatus["user"]["totalCollateralUSD"] -
+        aaveFloatStatus["user"]["totalDebtUSD"] /
+          aaveFloatStatus["user"]["ltv"]) /
+        (aaveFloatStatus[token]["price"] as number),
+      supplyAmount
+    );
+
+    const withdrawProps: WithdrawProps = {
+      supplyAmount: supplyAmount.toString(),
+      borrowAmount: borrowAmount.toString(),
+      utilizationRate: aaveFloatStatus[token]["utilizationRate"] as number,
+      supplyAPR: aaveFloatStatus[token]["supplyAPR"].toString(),
+      rewardAPR: supplyRewardAPR.toString(),
+      withdrawableAmount: withdrawableAmount.toString(),
+    };
+
+    console.log(withdrawProps);
+
+    let borrowAmountInput = 5;
+
+    const borrowProps: BorrowProps = {
+      netAPR: (
+        borrowRewardAPR -
+        (aaveFloatStatus[token]["variableBorrowAPR"] as number)
+      ).toString(),
+      availableLiquidity:
+        aaveFloatStatus[token]["availableLiquidity"].toString(),
+      utilizationRate: aaveFloatStatus[token]["utilizationRate"] as number,
+      supplyAmount: supplyAmount.toString(),
+      borrowAmount: borrowAmount.toString(),
+      borrowAPR: (-aaveFloatStatus[token]["variableBorrowAPR"]).toString(),
+      rewardAPR: borrowRewardAPR.toString(),
+      borrowableAmount:
+        aaveFloatStatus[token]["availableBorrowAmount"].toString(),
+      currentLTV: (aaveFloatStatus["user"]["currentLTV"] * 100).toString(),
+      maxLTV: aaveFloatStatus[token]["maxLTV"].toString(),
+      afterLTV: (
+        (((aaveFloatStatus["user"]["totalDebtUSD"] as number) +
+          borrowAmountInput * (aaveFloatStatus[token]["price"] as number)) /
+          (aaveFloatStatus["user"]["totalCollateralUSD"] as number)) *
+        100
+      ).toString(),
+    };
+
+    console.log(borrowProps);
+
+    let repayTypeAmount = 0.1;
+    let repayAmountInput = Math.min(repayTypeAmount, borrowAmount); // capped in max repay amount
+    let targetLTVRepay = 0.5;
+
+    const assetCurrentLTV =
+      (borrowAmount * (aaveFloatStatus[token]["price"] as number)) /
+      aaveFloatStatus["user"]["totalCollateralUSD"];
+    const { flashloanAmount: repayFlashloanAmount } =
+      calculateFlashloanDeleverageBaseAmount(
+        repayAmountInput,
+        supplyAmount,
+        assetCurrentLTV,
+        targetLTVRepay,
+        1,
+        1,
+        0.001
+      );
+
+    const closeProps: CloseProps = {
+      currentLTV: (assetCurrentLTV * 100).toString(),
+      supplyAmount: supplyAmount.toString(),
+      borrowAmount: borrowAmount.toString(),
+      borrowAPR: (-aaveFloatStatus[token]["variableBorrowAPR"]).toString(),
+      rewardAPR: borrowRewardAPR.toString(),
+    };
+
+    console.log(closeProps);
 
     // const compV2Status: Record<string, Record<string, string>> = {};
 
