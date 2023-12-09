@@ -23,6 +23,8 @@ npm install
 
 2. Compile contracts
 
+   If this the first time you compile the codes, you should comment the `import "./tasks";` in the [`hardhat.config.ts`](./hardhat.config.ts)
+
 ```
 npx hardhat compile
 ```
