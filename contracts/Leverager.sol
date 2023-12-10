@@ -32,7 +32,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     address public immutable vault;
     address public immutable WETH9;
     address public  immutable i_link;
-    mapping(uint64 => address) public dstToPropagator;
+    mapping(uint64 => address) internal dstToPropagator;
+    mapping(uint64 => address) internal dstToLeverager;
     Propagator public immutable propagator;
 
     // flags is 3bits expression
@@ -92,10 +93,10 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
     /* ========== ERRORS ========== */
      // Custom errors to provide more descriptive revert messages.
-    error SenderNotAllowlisted(address sender); // Used when the sender has not been allowlisted by the contract owner.
+    error SenderNotAllowlisted(); 
     error LengthMismatch(); 
     error InvalidFlashloanCallbackSender();
-    error InvalidInitiator(address initiator);
+    error InvalidInitiator();
     error MsgValueAmountDiff(uint256 msgValue, uint256 amount);
 
 
@@ -111,12 +112,16 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
     receive() external payable { }
 
-    function addDstChainPropagators(uint64[] memory destChainSelectors, address[] memory _propagators) external onlyOwner {
+    function addDstChainPropagatorsLeveragers(uint64[] memory destChainSelectors, address[] memory _propagators, address[] memory _leveragers) external onlyOwner {
         if (destChainSelectors.length != _propagators.length) revert LengthMismatch();
         for (uint256 i; i<destChainSelectors.length; i++){
             dstToPropagator[destChainSelectors[i]]=_propagators[i];
+            dstToLeverager[destChainSelectors[i]]=_leveragers[i];
         }
+
     }
+
+  
 
 
     /// @inheritdoc ILeverager
@@ -307,7 +312,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             revert InvalidFlashloanCallbackSender();
         }
         if(initiator!=address(this)){
-            revert InvalidInitiator(msg.sender);
+            revert InvalidInitiator();
         }
         
 
@@ -555,7 +560,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             Client.EVM2AnyMessage[] memory messages =new Client.EVM2AnyMessage[](destChainSelectors.length);
             for (uint256 i; i<destChainSelectors.length; i++){
                 Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-                    receiver: abi.encode(dstToPropagator[destChainSelectors[i]]),
+                    receiver: abi.encode(dstToLeverager[destChainSelectors[i]]),
                     data: abi.encode(msg.sender, cache.asset, cache.supplyToken, cache.flags, msgsData),
                     tokenAmounts: new Client.EVMTokenAmount[](0),
                     extraArgs: "",
@@ -686,10 +691,6 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         emit Deleverage(levParams.onBehalfOf, levParams.supplyAssetUnderlying, levParams.flashloanAsset, levParams.amount, levParams.flashloanAmount);
     }
 
-    /// add destination chain propagators to check the validity of the calls
-    function _addDstChainPropagator(uint64 destChainSelector, address _propagator) internal {
-        dstToPropagator[destChainSelector]=_propagator;
-    }
 
 
     function _sweep(address token) internal returns(uint256 amount) {
@@ -714,8 +715,10 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     ) internal override {
         address sender= abi.decode(message.sender, (address));
         if(dstToPropagator[message.sourceChainSelector]!=sender){
-            revert SenderNotAllowlisted(sender);
+            revert SenderNotAllowlisted();
         }
+
+
 
         (address onBehalfOf, address asset, address supplyToken, uint8 flags, bytes memory data) =
             abi.decode(message.data, (address, address, address, uint8, bytes));

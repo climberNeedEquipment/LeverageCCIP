@@ -114,7 +114,7 @@ Chainlink provides **20 LINK token per day in each chain**.
 ![Aave](./img/aave-faucet.png)
 [Aave](https://app.aave.com/faucet/) provides the mintable ERC20 tokens for testnet environments.
 
-### Approval
+### User assumptions
 
 Due to transferring the tokens, depositing as a collaterals and borrowing on behalf of the someone, we need many steps to follow to make enable to do all of functions.
 
@@ -166,33 +166,18 @@ export const propagatorAddress: AddressMap = {
 npx hardhat add-chainselector-propagator --network ethereumSepolia
 ```
 
-```shell
-npx hardhat deploy-source-minter
---router <routerAddress> # Optional
---link <linkTokenAddress> # Optional
-```
-
-For example, if you want to mint NFTs on avalancheFuji by sending requests from ethereumSepolia, run:
-
-```shell
-npx hardhat deploy-source-minter --network ethereumSepolia
-```
-
 ### Fee Management
 
-3. Fund the [`Leverager.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract with tokens for CCIP fees.
+4. Fund the [`Propagator.sol`](./contracts/Propagator.sol) smart contract with native tokens for CCIP fees.
 
 - If you want to pay for CCIP fees in Native tokens:
 
-  Open Metamask and fund your contract with Native tokens. For example, if you want to mint from Ethereum Sepolia to Avalanche Fuji, you can send 0.01 Sepolia ETH to the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract.
+  Open Metamask and fund your contract with Native tokens. For example, if you want to mint from Ethereum Sepolia to Avalanche Fuji, you can send 0.01 Sepolia ETH to the [`Propagator.sol`](./contracts/Propagator.sol) smart contract.
 
   Or, you can execute the `fill-sender` task, by running:
 
 ```shell
-npx hardhat fill-sender
---blockchain <blockchain>
---amount <amountToSend>
---pay-fees-in <Native>
+npx hardhat fill-sender --blockchain <blockchain> --amount <amountToSend> --pay-fees-in <Native>
 ```
 
 For example, if you want to fund it with 0.01 Sepolia ETH, run:
@@ -220,9 +205,42 @@ For example, if you want to fund it with 0.001 Sepolia LINK, run:
 npx hardhat fill-sender --blockchain ethereumSepolia --amount 1000000000000000 --pay-fees-in LINK
 ```
 
-### Minting
+### Approve
 
-4. Mint NFTs by calling the `mint()` function of the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract on the **source blockchain**. It will send the CCIP Cross-Chain Message with the ABI-encoded mint function signature from the [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract. The [`DestinationMinter.sol`](./contracts/cross-chain-nft-minter/DestinationMinter.sol) smart contracts will receive the CCIP Cross-Chain Message with the ABI-encoded mint function signature as a payload and call the [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract using it. The [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract will then mint the new NFT to the `msg.sender` account from the `mint()` function of the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract, a.k.a to the account from which you will call the following command:
+5. Approve ERC20 based tokens to the leverager.
+
+There are mainly 7 functions in the leverager contract. To enable the functions, it requires following assets' approval.
+
+1. Supply
+
+   **approve** | underlyingAsset
+
+2. Leverage supply
+
+   **approve** | underlyingAsset / CToken(Compound)
+
+   **approveDelegate** | DebtToken(Aave)
+
+3. Withdraw
+
+   **approve** | aToken(Aave) / CToken(Compound)
+
+4. Borrow
+
+   **approve** | CToken(Compound)
+   **approveDelegate** | DebtToken(Aave)
+
+5. Close(Repay)
+
+   **approve** | underlyingAsset
+
+6. Close(Deleverage)
+
+   **approve** | aToken(Aave) / CToken(Compound)
+
+7. Close(Close All)
+
+8. Mint NFTs by calling the `mint()` function of the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract on the **source blockchain**. It will send the CCIP Cross-Chain Message with the ABI-encoded mint function signature from the [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract. The [`DestinationMinter.sol`](./contracts/cross-chain-nft-minter/DestinationMinter.sol) smart contracts will receive the CCIP Cross-Chain Message with the ABI-encoded mint function signature as a payload and call the [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract using it. The [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract will then mint the new NFT to the `msg.sender` account from the `mint()` function of the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract, a.k.a to the account from which you will call the following command:
 
 ```shell
 npx hardhat cross-chain-mint

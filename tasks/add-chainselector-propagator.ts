@@ -13,9 +13,11 @@ task(
     const chains = ["ethereumSepolia", "polygonMumbai", "avalancheFuji"];
     const chainSelectors = [];
     const propagators = [];
+    const leveragers = [];
     for (const chain of chains) {
       chainSelectors.push(routerConfig[chain].chainSelector);
       propagators.push(propagatorAddress[chain]);
+      leveragers.push(leveragerAddress[chain]);
     }
     const privateKey = getPrivateKey();
     const rpcProviderUrl = getProviderRpcUrl(hre.network.name);
@@ -29,7 +31,11 @@ task(
       signer
     );
 
-    await leverager.addDstChainPropagators(chainSelectors, propagators);
+    await leverager.addDstChainPropagatorsLeveragers(
+      chainSelectors,
+      propagators,
+      leveragers
+    );
 
     console.log(`✅ on the ${hre.network.name} blockchain`);
   }

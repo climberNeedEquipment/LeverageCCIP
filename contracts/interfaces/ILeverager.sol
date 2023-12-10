@@ -38,7 +38,7 @@ interface ILeverager {
     // * @param data data is for the borrowApprove signature
     // For close
     // * @param asset The address of the underlying asset to deposit
-    // * @param borrowToken The address of the cToken / debtToken
+    // * @param supplyToken The address of the cToken / aToken
     // * @param amount The underlying asset amount to be repaid
     // * @param flags flags is 3bits expression
     // * the 1st for lending pool type(1 for aave, 0 for comp)
