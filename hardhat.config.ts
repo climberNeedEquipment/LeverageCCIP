@@ -52,6 +52,7 @@ const config: HardhatUserConfig = {
       url: AVALANCHE_FUJI_RPC_URL !== undefined ? AVALANCHE_FUJI_RPC_URL : "",
       accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
       chainId: 43113,
+      gasPrice: 80000000000,
     },
   },
 

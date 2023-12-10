@@ -4,3 +4,4 @@ import "./deploy-leverager";
 import "./fill-sender";
 import "./withdraw";
 import "./mint-erc20";
+import "./add-chainselector-propagator";

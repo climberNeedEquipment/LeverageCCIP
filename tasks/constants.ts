@@ -62,8 +62,14 @@ export const multicall3Address: string =
   "0x39cA4391f1e462B452750D01Be0820573699A8d9";
 
 export const leveragerAddress: AddressMap = {
-  [`ethereumSepolia`]: `0x32D5cA45846275A5c0b237bB3Ba0C14556EBF6d1`,
-  [`polygonMumbai`]: `0x904D09f842a256DE8B9c389737D2c40Bd860649A`,
+  [`ethereumSepolia`]: `0x5e96230EB452667C44200F4b6e3D9F3FE962174c`,
+  [`polygonMumbai`]: `0x0020eb0e3d5E938129201d2e146748691Ee3261B`,
+  [`avalancheFuji`]: `0x26d71fA254D8BB0092dA7F22e290F078c19f7A98`,
+};
+
+export const propagatorAddress: AddressMap = {
+  [`ethereumSepolia`]: `0xA13793E2aAb6bf797ccd3Ee23F730aDa6B1F231D`,
+  [`polygonMumbai`]: `0x0F94C6130941aB0A71BC877557d5894C7FCA4A90`,
   [`avalancheFuji`]: `0x26d71fA254D8BB0092dA7F22e290F078c19f7A98`,
 };
 

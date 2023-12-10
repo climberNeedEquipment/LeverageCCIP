@@ -76,9 +76,9 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     event Supply(address indexed user, address indexed token, uint256 amount);
     event Withdraw(address indexed user, address indexed token, uint256 amount);
     event Borrow(address indexed user, address indexed token, uint256 amount);
-    event Leverage(address indexed user, address indexed token, uint256 amount, uint256 ltv);
-    event Deleverage(address indexed user, address indexed token, uint256 amount, uint256 ltv);
-    event Close(address indexed user, uint256 srcChainId, uint256 dstChainId, uint256 amount, uint256 ltv);
+    event Leverage(address indexed user, address indexed token, address indexed flashloanToken, uint256 amount, uint256 flashloanAmount);
+    event Deleverage(address indexed user, address indexed token, address indexed flashloanToken, uint256 amount, uint256 flashloanAmount);
+    event Close(address indexed user, uint256 indexed srcChainId, address indexed token, uint256 dstChainId, uint256 amount, uint256 ltv);
      // Event emitted when a message is received from another chain.
     event MessageReceived(
         bytes32 indexed messageId, // The unique ID of the CCIP message.
@@ -101,11 +101,11 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
 
     /* ========== INITIALIZER ========== */
 
-    constructor(address weth9,  address router, address link, address _vault) Ownable(msg.sender) CCIPReceiver(router) {
+    constructor(address owner, address weth9,  address router, address link, address _vault) Ownable(owner) CCIPReceiver(router) {
         WETH9 = weth9;
         vault = _vault; // aaveV3 lending pool
         i_link = link;
-        propagator =new Propagator(router, link, msg.sender);
+        propagator =new Propagator(router, link, owner);
     }
 
 
@@ -619,6 +619,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             );
             if (levParams.flashloanAsset != levParams.borrowAssetUnderlying) { }
         }
+
+        emit Leverage(levParams.onBehalfOf, levParams.supplyAssetUnderlying, levParams.flashloanAsset, levParams.amount, levParams.flashloanAmount);
     }
 
     /// deleverage function with target ltv calculated value
@@ -672,6 +674,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             );
             if (levParams.flashloanAsset != levParams.borrowAssetUnderlying) { }
         }
+
+        emit Deleverage(levParams.onBehalfOf, levParams.supplyAssetUnderlying, levParams.flashloanAsset, levParams.amount, levParams.flashloanAmount);
     }
 
     /// add destination chain propagators to check the validity of the calls

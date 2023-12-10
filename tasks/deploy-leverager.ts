@@ -12,6 +12,7 @@ import {
 import { Deployer } from "./utils";
 import { bytecode as leverage_bytecode } from "../artifacts/contracts/Leverager.sol/Leverager.json";
 import { bytecode as multicall3_bytecode } from "../artifacts/contracts/helpers/Multicall3.sol/Multicall3.json";
+import { Leverager__factory } from "../typechain-types";
 task(`deploy-leverager`, `Deploys Leverager.sol smart contract`)
   .addOptionalParam(
     `vault`,
@@ -48,16 +49,17 @@ task(`deploy-leverager`, `Deploys Leverager.sol smart contract`)
       );
       spinner.start();
 
-      // await deployer.deploy(id("lever-ez"), multicall3_bytecode);
-
-      await deployer.deploy(
-        id("lever_ez"),
+      const leveragerAddress = await deployer.deploy(
+        id("Lever_EZ"),
         leverage_bytecode +
           deployer.encoder(
-            ["address", "address", "address", "address"],
-            [wnativeAddress, routerAddress, linkAddress, vault]
+            ["address", "address", "address", "address", "address"],
+            [wallet.address, wnativeAddress, routerAddress, linkAddress, vault]
           )
       );
+
+      const levearger = Leverager__factory.connect(leveragerAddress, provider);
+      console.log("propagator : ", await levearger.propagator());
 
       spinner.stop();
       console.log(`✅ on the ${hre.network.name} blockchain`);

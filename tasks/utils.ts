@@ -9,6 +9,7 @@ import {
 
 import {
   AbiCoder,
+  BaseContract,
   ParamType,
   getBigInt,
   getCreate2Address,
@@ -17,7 +18,7 @@ import {
 import {
   Create2DeployerLocal__factory,
   Create2DeployerLocal,
-} from "../typechain-types/contracts";
+} from "../typechain-types";
 import { Wallet, JsonRpcProvider } from "ethers";
 
 export const getProviderRpcUrl = (network: string) => {
@@ -130,7 +131,7 @@ export class Deployer {
     };
   }
 
-  async deploy(this: any, salt: string, initCode: string) {
+  async deploy(this: any, salt: string, initCode: string): Promise<string> {
     const create2Addr: string = this.create2Address(salt, initCode);
     console.log("precomputed address: ", create2Addr);
 
@@ -140,6 +141,7 @@ export class Deployer {
     await tx.wait();
 
     console.log("deployed address: ", create2Addr);
+    return create2Addr;
   }
 }
 

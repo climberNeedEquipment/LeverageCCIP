@@ -57,6 +57,7 @@ describe("Leverager", () => {
     leverager = await (await hre.ethers.getContractFactory("Leverager"))
       .connect(signer)
       .deploy(
+        signer.address,
         WETH_ADDRESSES[network],
         routerConfig[network].address,
         LINK_ADDRESSES[network],
