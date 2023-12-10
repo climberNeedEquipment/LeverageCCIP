@@ -12,6 +12,7 @@ import {
   LENDING_POOLS,
   leveragerAddress,
   propagatorAddress,
+  routerConfig,
 } from "./constants";
 import { Deployer } from "./utils";
 task(
@@ -19,18 +20,13 @@ task(
   `Adds propagator from other chains to each mainnet`
 ).setAction(
   async (taskArguments: TaskArguments, hre: HardhatRuntimeEnvironment) => {
-    const chainSelectors = [
-      "16015286601757825753",
-      "12532609583862916517",
-      "14767482510784806043",
-    ];
-    const propagators = [
-      "0xabcE183A0721Ea13a2a68a0DDfc67125f9826f58",
-      "0xA921C025b4527F859E6e33e6663B52B6e9D6201c",
-      "0x26d71fA254D8BB0092dA7F22e290F078c19f7A98",
-    ];
-    leveragerAddress[hre.network.name];
-
+    const chains = ["ethereumSepolia", "polygonMumbai", "avalancheFuji"];
+    const chainSelectors = [];
+    const propagators = [];
+    for (const chain of chains) {
+      chainSelectors.push(routerConfig[chain].chainSelector);
+      propagators.push(propagatorAddress[chain]);
+    }
     const privateKey = getPrivateKey();
     const rpcProviderUrl = getProviderRpcUrl(hre.network.name);
 
