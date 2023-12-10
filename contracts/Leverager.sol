@@ -264,7 +264,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         }
 
         if (inputParams.data.length == 0) {
-            if (inputParams.flags & 0x1 == 0) {
+            if (inputParams.flags & 0x2 == 0) {
                 _compV2Repay(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
             } else {
                 _aaveRepay(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);

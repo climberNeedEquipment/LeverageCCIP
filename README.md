@@ -118,15 +118,15 @@ Chainlink provides **20 LINK token per day in each chain**.
 
 Due to transferring the tokens, depositing as a collaterals and borrowing on behalf of the someone, we need many steps to follow to make enable to do all of functions.
 
-To minimize the complexity of contracts for the hackathons, we assumed the users like this
+To minimize the complexity of contracts for the hackathons, we assumed the users as follows
 
-- Who has already supplied to the aaveV2/V3 lending pools before and hasn't disabled the assets as collaterals.
-- Who supplies and borrows(leverages) int the same assets.
+- Who has already supplied to the aaveV2 / V3 lending pools before and hasn't disabled the assets as collaterals.
+- Who supplies and borrows( **leverage** / **deleverage** ) in the same assets.
 
 ### Get Info
 
 ```shell
-npx hardhat lending-status  --blockchain ethereumSepolia
+npx hardhat lending-status --blockchain ethereumSepolia
 ```
 
 ### Deployment
@@ -144,7 +144,27 @@ For example, if you want to mint Leverager on avalancheFuji, run:
 npx hardhat deploy-leverager --network avalancheFuji
 ```
 
-2. Deploy the [`LeverageViewer.sol`](./contracts/cross-chain-nft-minter/DestinationMinter.sol) smart contract to the **source blockchain**, by running the `deploy-source-minter` task:
+2. Replace the values of leveragerAddress and propagatorAddress in [`constants.ts`](./tasks/constants.ts)
+
+```shell
+export const leveragerAddress: AddressMap = {
+  [`ethereumSepolia`]: `0x5e96230EB452667C44200F4b6e3D9F3FE962174c`,
+  [`polygonMumbai`]: `0x0020eb0e3d5E938129201d2e146748691Ee3261B`,
+  [`avalancheFuji`]: `0x5ccC154987a3c144F1F1fAD2F6Cf62ebAA716307`,
+};
+
+export const propagatorAddress: AddressMap = {
+  [`ethereumSepolia`]: `0xA13793E2aAb6bf797ccd3Ee23F730aDa6B1F231D`,
+  [`polygonMumbai`]: `0x0F94C6130941aB0A71BC877557d5894C7FCA4A90`,
+  [`avalancheFuji`]: `0x6Fe63802623a87420F4a25c1642ACCd33da224F0`,
+};
+```
+
+3. After depolying all of testnets, enroll the propagator of each source chain to leverager
+
+```shell
+npx hardhat add-chainselector-propagator --network ethereumSepolia
+```
 
 ```shell
 npx hardhat deploy-source-minter
