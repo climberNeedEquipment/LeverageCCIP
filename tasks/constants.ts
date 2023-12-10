@@ -62,15 +62,15 @@ export const multicall3Address: string =
   "0x39cA4391f1e462B452750D01Be0820573699A8d9";
 
 export const leveragerAddress: AddressMap = {
-  [`ethereumSepolia`]: `0x128a82abD1C6D83C951C723027D6D78b26c6107f`,
-  [`polygonMumbai`]: `0x30B69a7538CA8880fa9Ace4392cb2513dfE79A63`,
-  [`avalancheFuji`]: `0xAa82a246Ea9EBAb4AA132e6160217537bdfc35F1`,
+  [`ethereumSepolia`]: `0xE21934E704e6Fe437aa9ad434360Ff5b01F42596`,
+  [`polygonMumbai`]: `0x260D3A67FDA4b49554497facf520Fe0355CA37AF`,
+  [`avalancheFuji`]: `0x98A76D8bB06ba8404c94e5d71212fE3a4403C447`,
 };
 
 export const propagatorAddress: AddressMap = {
-  [`ethereumSepolia`]: `0x3B8C94f5AB21A972453bB9A48D9d0c90c813B680`,
-  [`polygonMumbai`]: `0x73b5A1F764AED1431c626eB035307FCfb8F677b3`,
-  [`avalancheFuji`]: `0xd1280e14c5e30F431ccA989a43629E36D782Cb18`,
+  [`ethereumSepolia`]: `0x9593CB2BCAc3Bd65E38A90178A44B95bb16920C8`,
+  [`polygonMumbai`]: `0x9159007Af6Ae3475Dd03D02e1536a2824a520c53`,
+  [`avalancheFuji`]: `0x4e564F21B5e8b1DC3925Bc12FADdAb1bE91C098a`,
 };
 
 export const supportedNetworks = [

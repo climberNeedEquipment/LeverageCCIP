@@ -264,7 +264,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         }
 
         if (inputParams.data.length == 0) {
-            if (inputParams.flags & 0x2 == 0) {
+            if (inputParams.flags & 0x1 == 0) {
                 _compV2Repay(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
             } else {
                 _aaveRepay(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
@@ -317,7 +317,7 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             // premium for flashloan is 0.05% of the amount
             // premium for using lever-ez is 0.05% of the amount
 
-            if (levParams.flags & 0x1 == 0) {
+            if (levParams.flags & 0x2 == 0) {
                 // deleverage
                 _deleverage(levParams, amounts[0] +2*premiums[0]);
             } else {
