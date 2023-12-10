@@ -2,11 +2,16 @@ import {
   Leverager__factory,
   Leverager,
   ILeverager,
+  IRouterClient,
   IPool__factory,
   IPool,
   MockERC20,
   MockERC20__factory,
+  Client__factory,
+  IRouterClient__factory,
 } from "../typechain-types";
+
+import { contractsCcip } from "../typechain-types/@chainlink";
 import { resetFork } from "./utils";
 import {
   MINTABLE_ERC20_TOKENS,
@@ -23,6 +28,8 @@ import { getPrivateKey } from "../tasks/utils";
 import { expect } from "chai";
 import { AbiCoder, Wallet, ethers, parseEther, parseUnits } from "ethers";
 import hre from "hardhat";
+import { Client as RouterClient } from "../typechain-types/@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient";
+import { Client } from "../typechain-types/@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IAny2EVMMessageReceiver";
 describe("Leverager", () => {
   let leverager: Leverager;
   let signer: any;
@@ -47,16 +54,14 @@ describe("Leverager", () => {
       params: [signer.address],
     });
 
-    leverager = (
-      await (
-        await hre.ethers.getContractFactory("Leverager")
-      ).deploy(
+    leverager = await (await hre.ethers.getContractFactory("Leverager"))
+      .connect(signer)
+      .deploy(
         WETH_ADDRESSES[network],
         routerConfig[network].address,
         LINK_ADDRESSES[network],
         LENDING_POOLS[network].AaveV3LendingPool
-      )
-    ).connect(signer);
+      );
 
     // const aaveLendingContract: IPool = await IPool__factory.connect(
     //   LENDING_POOLS[network].AaveV3LendingPool,
@@ -66,6 +71,14 @@ describe("Leverager", () => {
     const leverageAddress = await leverager.getAddress();
 
     console.log("Leverager deployed to:", leverageAddress);
+
+    /// add destination chain propagator
+    const propagator = await leverager.propagator();
+
+    await leverager.addDstChainPropagators(
+      [routerConfig[network].chainSelector],
+      [propagator]
+    );
 
     for (const [tokenName, tokenAddress] of Object.entries(
       MINTABLE_ERC20_TOKENS[network]
@@ -127,7 +140,10 @@ describe("Leverager", () => {
     };
     leverager.connect(signer);
 
+    console.log(leverager.interface.encodeFunctionData("supply", [params]));
+
     const tx = await leverager.supply(params);
+
     const receipt = await tx.wait();
 
     /// Withdraw
@@ -138,6 +154,7 @@ describe("Leverager", () => {
     // flags += 4; // base
 
     // const tx2 = await leverager.withdraw(params);
+    console.log(leverager.interface.encodeFunctionData("withdraw", [params]));
     // const receipt2 = await tx2.wait();
     // console.log("receipt2:", receipt2);
 
@@ -215,11 +232,55 @@ describe("Leverager", () => {
         "0x",
       ]
     );
-    params.amount = "0";
 
-    params.data = closeFlashloanData;
-    const tx6 = await leverager.close(params);
-    const receipt6 = await tx6.wait();
+    const propagator = await leverager.propagator();
+
+    const chainlinkData = new AbiCoder().encode(
+      ["address", "address", "address", "uint8", "bytes"],
+      [
+        signer.address,
+        MINTABLE_ERC20_TOKENS[network][token],
+        AAVE_V3_A_TOKENS[network][token],
+        flags,
+        closeFlashloanData,
+      ]
+    );
+    const clientMsg: Client.Any2EVMMessageStruct = {
+      messageId:
+        "0x84bff367c056ff4fd56701c6344e562d924a68688bc280c8b13b47f299472a3f",
+      sourceChainSelector: routerConfig[network].chainSelector,
+      sender: new AbiCoder().encode(["address"], [propagator]),
+      data: chainlinkData,
+      destTokenAmounts: [],
+    };
+
+    /// donate ethers to router for making fake tx
+
+    await hre.network.provider.send("hardhat_setBalance", [
+      routerConfig[network].address,
+      "0x" + hre.ethers.parseEther("10").toString(16),
+    ]);
+
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [routerConfig[network].address],
+    });
+    const routerSigner = await hre.ethers.getSigner(
+      routerConfig[network].address
+    );
+
+    const leverageCallInstance = Leverager__factory.connect(
+      await leverager.getAddress(),
+      routerSigner
+    );
+    await leverageCallInstance.ccipReceive(clientMsg);
+
+    // params.amount = "0";
+
+    // params.data = closeFlashloanData;
+    // const tx6 = await leverager.close(params);
+
+    // const receipt6 = await tx6.wait();
 
     expect(await debtERC20[token].balanceOf(signer.address)).to.equal(
       parseUnits("1", "ether")
