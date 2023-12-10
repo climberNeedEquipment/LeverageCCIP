@@ -3,7 +3,7 @@ import { TaskArguments } from "hardhat/types";
 import { getPrivateKey, getProviderRpcUrl, getPayFeesIn } from "./utils";
 import { Wallet, ethers } from "ethers";
 import { IERC20, IERC20__factory } from "../typechain-types";
-import { LINK_ADDRESSES, PayFeesIn } from "./constants";
+import { LINK_ADDRESSES, PayFeesIn, propagatorAddress } from "./constants";
 import { Spinner } from "../utils/spinner";
 
 task(
@@ -11,17 +11,13 @@ task(
   `Transfers the provided amount of LINK token or native coin to the sender contract to serve for paying CCIP fees`
 )
   .addParam(
-    `senderAddress`,
-    `The address of a sender contract on the source blockchain`
-  )
-  .addParam(
     `blockchain`,
     `The name of the blockchain (for example ethereumSepolia)`
   )
   .addParam(`amount`, `Amount to send`)
   .addParam(`payFeesIn`, `Choose between 'Native' and 'LINK'`)
   .setAction(async (taskArguments: TaskArguments) => {
-    const { senderAddress, blockchain, amount, payFeesIn } = taskArguments;
+    const { blockchain, amount, payFeesIn } = taskArguments;
 
     const privateKey = getPrivateKey();
     const rpcProviderUrl = getProviderRpcUrl(blockchain);
@@ -36,12 +32,12 @@ task(
 
     if (fees === PayFeesIn.Native) {
       console.log(
-        `ℹ️  Attempting to send ${amount} of ${blockchain} native coins from ${signer.address} to ${senderAddress}`
+        `ℹ️  Attempting to send ${amount} of ${blockchain} native coins from ${signer.address} to ${propagatorAddress[blockchain]}`
       );
       spinner.start();
 
       const tx = await signer.sendTransaction({
-        to: senderAddress,
+        to: propagatorAddress[blockchain],
         value: amount,
       });
       await tx.wait();
@@ -55,11 +51,11 @@ task(
       );
 
       console.log(
-        `ℹ️  Attempting to send ${amount} of ${link.target} tokens from ${signer.address} to ${senderAddress}`
+        `ℹ️  Attempting to send ${amount} of ${link.target} tokens from ${signer.address} to ${propagatorAddress[blockchain]}`
       );
       spinner.start();
 
-      const tx = await link.transfer(senderAddress, amount);
+      const tx = await link.transfer(propagatorAddress[blockchain], amount);
       await tx.wait();
 
       spinner.stop();

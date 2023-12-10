@@ -170,7 +170,6 @@ npx hardhat deploy-source-minter --network ethereumSepolia
 
 ```shell
 npx hardhat fill-sender
---sender-address <sourceMinterAddress>
 --blockchain <blockchain>
 --amount <amountToSend>
 --pay-fees-in <Native>
@@ -179,7 +178,7 @@ npx hardhat fill-sender
 For example, if you want to fund it with 0.01 Sepolia ETH, run:
 
 ```shell
-npx hardhat fill-sender --sender-address <SOURCE_MINTER_ADDRESS> --blockchain ethereumSepolia --amount 10000000000000000 --pay-fees-in Native
+npx hardhat fill-sender --blockchain ethereumSepolia --amount 10000000000000000 --pay-fees-in Native
 ```
 
 - If you want to pay for CCIP fees in LINK tokens:
@@ -190,7 +189,6 @@ npx hardhat fill-sender --sender-address <SOURCE_MINTER_ADDRESS> --blockchain et
 
 ```shell
 npx hardhat fill-sender
---sender-address <sourceMinterAddress>
 --blockchain <blockchain>
 --amount <amountToSend>
 --pay-fees-in <LINK>
@@ -199,7 +197,7 @@ npx hardhat fill-sender
 For example, if you want to fund it with 0.001 Sepolia LINK, run:
 
 ```shell
-npx hardhat fill-sender --sender-address <SOURCE_MINTER_ADDRESS> --blockchain ethereumSepolia --amount 1000000000000000 --pay-fees-in LINK
+npx hardhat fill-sender --blockchain ethereumSepolia --amount 1000000000000000 --pay-fees-in LINK
 ```
 
 ### Minting

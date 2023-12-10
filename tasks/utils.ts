@@ -9,7 +9,6 @@ import {
 
 import {
   AbiCoder,
-  BaseContract,
   ParamType,
   getBigInt,
   getCreate2Address,

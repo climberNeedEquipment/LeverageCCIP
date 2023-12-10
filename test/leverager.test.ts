@@ -198,8 +198,8 @@ describe("Leverager", () => {
     const repayFlashloanData = new AbiCoder().encode(
       ["address", "address", "uint256", "bytes"],
       [
-        AAVE_V3_DEBT_TOKENS[network][token],
         MINTABLE_ERC20_TOKENS[network][token],
+        AAVE_V3_DEBT_TOKENS[network][token],
         parseUnits("2", "ether"),
         "0x",
       ]
@@ -224,13 +224,18 @@ describe("Leverager", () => {
 
     // deleverage
 
+    // inputParams.data = closeFlashloanData;
+    // closeFlashloanData = flashloan params + chainlink data
+    // chainlink data= abi.encode("uint64[]", "bytes[]" [destination Selectors, msgsData])
+    // msgs data = destination chain's closeFlashloanData
+
     const closeFlashloanData = new AbiCoder().encode(
       ["address", "address", "uint256", "bytes"],
       [
         MINTABLE_ERC20_TOKENS[network][token],
         AAVE_V3_DEBT_TOKENS[network][token],
         parseUnits("2", "ether"),
-        "0x",
+        "0x", // chainlink data
       ]
     );
 

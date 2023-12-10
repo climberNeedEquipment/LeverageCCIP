@@ -2,19 +2,9 @@ import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment, TaskArguments } from "hardhat/types";
 import { getPrivateKey, getProviderRpcUrl, getRouterConfig } from "./utils";
 import { Wallet, ethers, id } from "ethers";
-import { Spinner } from "../utils/spinner";
 
 import { Leverager__factory } from "../typechain-types";
-import {
-  LINK_ADDRESSES,
-  create2DeployerAddress,
-  WETH_ADDRESSES,
-  LENDING_POOLS,
-  leveragerAddress,
-  propagatorAddress,
-  routerConfig,
-} from "./constants";
-import { Deployer } from "./utils";
+import { leveragerAddress, propagatorAddress, routerConfig } from "./constants";
 task(
   `add-chainselector-propagator`,
   `Adds propagator from other chains to each mainnet`

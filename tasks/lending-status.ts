@@ -37,6 +37,7 @@ import {
   IUiIncentiveDataProviderV3,
   IUiPoolDataProviderV3__factory,
   IUiIncentiveDataProviderV3__factory,
+  IAvalancheUiPoolDataProviderV3__factory,
   MockERC20__factory,
 } from "../typechain-types";
 import { Spinner } from "../utils/spinner";
@@ -101,10 +102,16 @@ task("lending-status", "Gets the balance of tokens for provided address")
       LENDING_POOLS[taskArguments.blockchain].AaveV3LendingPool,
       signer
     );
-    const aaveV3PoolDataProvider = IUiPoolDataProviderV3__factory.connect(
-      LENDING_POOLS[taskArguments.blockchain].AaveV3UiPoolDataProvider,
-      signer
-    );
+    const aaveV3PoolDataProvider =
+      taskArguments.blockchain !== "avalancheFuji"
+        ? IUiPoolDataProviderV3__factory.connect(
+            LENDING_POOLS[taskArguments.blockchain].AaveV3UiPoolDataProvider,
+            signer
+          )
+        : IAvalancheUiPoolDataProviderV3__factory.connect(
+            LENDING_POOLS[taskArguments.blockchain].AaveV3UiPoolDataProvider,
+            signer
+          );
 
     const aaveV3IncentiveDataProvider =
       IUiIncentiveDataProviderV3__factory.connect(
@@ -126,7 +133,6 @@ task("lending-status", "Gets the balance of tokens for provided address")
     const aaveV3Data = await aaveV3PoolDataProvider.getReservesData(
       LENDING_POOLS[taskArguments.blockchain].AaveV3AddressProvider
     );
-
     const aaveV3IncentiveData =
       await aaveV3IncentiveDataProvider.getReservesIncentivesData(
         LENDING_POOLS[taskArguments.blockchain].AaveV3AddressProvider
@@ -139,7 +145,11 @@ task("lending-status", "Gets the balance of tokens for provided address")
     const TOKEN_ADDRESS_TO_NAME: Record<string, string> = {};
 
     /// unit in a ray=10**27
-    aaveV3Data[0].forEach((element) => {
+
+    (taskArguments.blockchain !== "avalancheFuji"
+      ? aaveV3Data[0]
+      : aaveV3Data
+    ).forEach((element) => {
       const name = element.name.toString();
       aaveV3Status[name] = {
         decimals: element.decimals.toString(),
@@ -214,7 +224,15 @@ task("lending-status", "Gets the balance of tokens for provided address")
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
       if (result.success) {
-        const name = aaveV3Data[0][idx].name.toString();
+        const aaveV3DataTyped =
+          taskArguments.blockchain !== "avalancheFuji"
+            ? aaveV3Data[0][idx]
+            : aaveV3Data[idx];
+
+        const name = aaveV3DataTyped["name"];
+        // console.log(name);
+        // console.log(aaveV3Status);
+        // console.log(aaveV3Status[name]);
 
         if (i % 6 === 0) {
           aaveV3Status[name]["priceOracleDecimals"] = itf
@@ -263,7 +281,10 @@ task("lending-status", "Gets the balance of tokens for provided address")
       }
     }
 
-    aaveV3Data[0].forEach((element) => {
+    (taskArguments.blockchain !== "avalancheFuji"
+      ? aaveV3Data[0]
+      : aaveV3Data
+    ).forEach((element) => {
       const name = element.name.toString();
 
       const totalATokenSupply = rayMul(
@@ -414,7 +435,9 @@ task("lending-status", "Gets the balance of tokens for provided address")
     aaveV3AccountNetStatus["healthFactor"] =
       accountData.healthFactor.toString();
     aaveV3AccountNetStatus["baseDecimals"] =
-      aaveV3Data[1].networkBaseTokenPriceDecimals.toString();
+      taskArguments.blockchain !== "avalancheFuji"
+        ? aaveV3Data[1].networkBaseTokenPriceDecimals.toString()
+        : "8";
 
     console.log(aaveV3AccountNetStatus);
 

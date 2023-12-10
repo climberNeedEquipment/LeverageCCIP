@@ -164,9 +164,4 @@ task("balance-of", "Gets the balance of tokens for provided address")
     );
 
     spinner.stop();
-    // console.log(
-    //   `ℹ️  The balance of MyNFTs of the ${
-    //     wallet.address
-    //   } account is ${BigInt(balanceOf)}`
-    // );
   });
