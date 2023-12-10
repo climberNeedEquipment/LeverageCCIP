@@ -210,9 +210,9 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
     {
         bool isETH = inputParams.asset.isETH();
         if (inputParams.flags & 0x1 == 0) {
-            returnAmount = _compV2Withdraw(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
+            returnAmount = _compV2Withdraw(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender, msg.sender);
         } else {
-            returnAmount = _aaveWithdraw(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender);
+            returnAmount = _aaveWithdraw(isETH, inputParams.asset, inputParams.counterAsset, inputParams.amount, msg.sender, msg.sender);
         }
         emit Withdraw(msg.sender, inputParams.asset, inputParams.amount);
     
@@ -357,12 +357,15 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         address token,
         address supplyToken,
         uint256 amount,
-        address onBehalfOf
+        address onBehalfOf,
+        address receiver
     )
         internal
         returns (uint256 returnAmount)
     {
-        supplyToken.safeTransferFrom(onBehalfOf, address(this), amount);
+        if (onBehalfOf != address(this)) {
+            supplyToken.safeTransferFrom(onBehalfOf, address(this), amount);
+        }
 
         address lendingPool = IAToken(supplyToken).POOL();
 
@@ -373,8 +376,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
             IWETH(WETH9).withdraw(amount);
         }
 
-        if (onBehalfOf != address(this)) {
-            token.uniTransfer(payable(onBehalfOf), amount);
+        if (receiver != address(this)) {
+            token.uniTransfer(payable(receiver), amount);
         }
 
         returnAmount = amount;
@@ -447,13 +450,15 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
         address token,
         address supplyToken,
         uint256 amount,
-        address onBehalfOf
+        address onBehalfOf,
+        address receiver
     )
         internal
         returns (uint256 returnAmount)
     {
-        supplyToken.safeTransferFrom(onBehalfOf, address(this), amount);
-
+        if (onBehalfOf != address(this)) {
+            supplyToken.safeTransferFrom(onBehalfOf, address(this), amount);
+        }
         CToken(supplyToken).redeem(amount);
         returnAmount = token.uniBalanceOf(address(this));
         if (onBehalfOf != address(this)) {
@@ -646,7 +651,9 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
                 levParams.supplyAssetUnderlying,
                 levParams.supplyToken,
                 totalWithdraw,
-                levParams.onBehalfOf
+                levParams.onBehalfOf,
+                address(this)
+
             );
 
             /// flashloan lending pool push/pull back using WETH9 token
@@ -670,7 +677,8 @@ contract Leverager is IFlashLoanReceiver, ReentrancyLock, ILeverager, Ownable, C
                 levParams.supplyAssetUnderlying,
                 levParams.supplyToken,
                 totalWithdraw,
-                levParams.onBehalfOf
+                levParams.onBehalfOf,
+                address(this)
             );
             if (levParams.flashloanAsset != levParams.borrowAssetUnderlying) { }
         }

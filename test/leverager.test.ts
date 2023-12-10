@@ -155,7 +155,7 @@ describe("Leverager", () => {
     // flags += 4; // base
 
     // const tx2 = await leverager.withdraw(params);
-    console.log(leverager.interface.encodeFunctionData("withdraw", [params]));
+    // console.log(leverager.interface.encodeFunctionData("withdraw", [params]));
     // const receipt2 = await tx2.wait();
     // console.log("receipt2:", receipt2);
 
@@ -207,6 +207,7 @@ describe("Leverager", () => {
 
     flags = 0;
     flags += 1; // aave
+    flags += 2; // leverage
 
     /// Leverage Supply
     const supplyFlashloanData = new AbiCoder().encode(
@@ -229,57 +230,65 @@ describe("Leverager", () => {
     // chainlink data= abi.encode("uint64[]", "bytes[]" [destination Selectors, msgsData])
     // msgs data = destination chain's closeFlashloanData
 
+    flags = 0;
+    flags += 1;
     const closeFlashloanData = new AbiCoder().encode(
       ["address", "address", "uint256", "bytes"],
       [
         MINTABLE_ERC20_TOKENS[network][token],
         AAVE_V3_DEBT_TOKENS[network][token],
-        parseUnits("2", "ether"),
+        parseUnits("1", "ether"),
         "0x", // chainlink data
       ]
     );
+    params.counterAsset = AAVE_V3_A_TOKENS[network][token];
+    params.amount = "0";
+    params.data = closeFlashloanData;
+    params.flags = flags;
 
-    const propagator = await leverager.propagator();
+    await leverager.close(params);
 
-    const chainlinkData = new AbiCoder().encode(
-      ["address", "address", "address", "uint8", "bytes"],
-      [
-        signer.address,
-        MINTABLE_ERC20_TOKENS[network][token],
-        AAVE_V3_A_TOKENS[network][token],
-        flags,
-        closeFlashloanData,
-      ]
-    );
-    const clientMsg: Client.Any2EVMMessageStruct = {
-      messageId:
-        "0x84bff367c056ff4fd56701c6344e562d924a68688bc280c8b13b47f299472a3f",
-      sourceChainSelector: routerConfig[network].chainSelector,
-      sender: new AbiCoder().encode(["address"], [propagator]),
-      data: chainlinkData,
-      destTokenAmounts: [],
-    };
+    // const propagator = await leverager.propagator();
 
-    /// donate ethers to router for making fake tx
+    // const chainlinkData = new AbiCoder().encode(
+    //   ["address", "address", "address", "uint8", "bytes"],
+    //   [
+    //     signer.address,
+    //     MINTABLE_ERC20_TOKENS[network][token],
+    //     AAVE_V3_A_TOKENS[network][token],
+    //     flags,
+    //     closeFlashloanData,
+    //   ]
+    // );
+    // const clientMsg: Client.Any2EVMMessageStruct = {
+    //   messageId:
+    //     "0x84bff367c056ff4fd56701c6344e562d924a68688bc280c8b13b47f299472a3f",
+    //   sourceChainSelector: routerConfig[network].chainSelector,
+    //   sender: new AbiCoder().encode(["address"], [propagator]),
+    //   data: chainlinkData,
+    //   destTokenAmounts: [],
+    // };
 
-    await hre.network.provider.send("hardhat_setBalance", [
-      routerConfig[network].address,
-      "0x" + hre.ethers.parseEther("10").toString(16),
-    ]);
+    // /// donate ethers to router for making fake tx
 
-    await hre.network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [routerConfig[network].address],
-    });
-    const routerSigner = await hre.ethers.getSigner(
-      routerConfig[network].address
-    );
+    // await hre.network.provider.send("hardhat_setBalance", [
+    //   routerConfig[network].address,
+    //   "0x" + hre.ethers.parseEther("10").toString(16),
+    // ]);
 
-    const leverageCallInstance = Leverager__factory.connect(
-      await leverager.getAddress(),
-      routerSigner
-    );
-    await leverageCallInstance.ccipReceive(clientMsg);
+    // await hre.network.provider.request({
+    //   method: "hardhat_impersonateAccount",
+    //   params: [routerConfig[network].address],
+    // });
+    // const routerSigner = await hre.ethers.getSigner(
+    //   routerConfig[network].address
+    // );
+
+    // const leverageCallInstance = Leverager__factory.connect(
+    //   await leverager.getAddress(),
+    //   routerSigner
+    // );
+    // await leverageCallInstance.ccipReceive(clientMsg);
 
     // params.amount = "0";
 
