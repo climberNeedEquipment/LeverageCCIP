@@ -52,7 +52,7 @@ In critical scenarios, mirroring the urgency seen in traditional markets, users 
 
 ![LEVER-EZ Close All](./img/lever_ez_close_all.png)
 
-The Leverager contract within LEVER-EZ inherits both CCIP and CCIP receiver contracts. With Chainlink CCIP integration, users gain unparalleled capabilities:
+The Leverager contract within LEVER-EZ inherits CCIP receiver contract. With Chainlink CCIP integration, users gain unparalleled capabilities:
 
 - **Supply and Borrow:** Swiftly supply and borrow tokens within lending protocols.
 - **Leveraged Yielding Positions:** Open positions combining supply and borrow operations for optimized yields.
@@ -127,6 +127,12 @@ To minimize the complexity of contracts for the hackathons, we assumed the users
 
 ```shell
 npx hardhat lending-status --blockchain ethereumSepolia
+```
+
+### Test
+
+```shell
+npx hardhat test (--v / --vv / --vvv / --vvvv)
 ```
 
 ### Deployment
@@ -236,68 +242,26 @@ There are mainly 7 functions in the leverager contract. To enable the functions,
 
 6. Close(Deleverage)
 
+   **approve** | underlyingAsset
    **approve** | aToken(Aave) / CToken(Compound)
 
 7. Close(Close All)
 
-8. Mint NFTs by calling the `mint()` function of the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract on the **source blockchain**. It will send the CCIP Cross-Chain Message with the ABI-encoded mint function signature from the [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract. The [`DestinationMinter.sol`](./contracts/cross-chain-nft-minter/DestinationMinter.sol) smart contracts will receive the CCIP Cross-Chain Message with the ABI-encoded mint function signature as a payload and call the [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract using it. The [`MyNFT.sol`](./contracts/cross-chain-nft-minter/MyNFT.sol) smart contract will then mint the new NFT to the `msg.sender` account from the `mint()` function of the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract, a.k.a to the account from which you will call the following command:
+   **approve** | underlyingAsset/ aToken(Aave) / CToken(Compound) in each chain
+   **funded propagator** in each chain
 
-```shell
-npx hardhat cross-chain-mint
---source-minter <sourceMinterAddress>
---source-blockchain <sourceBlockchain>
---destination-blockchain <destinationBlockchain>
---destination-minter <destinationMinterAddress>
---pay-fees-in <Native | LINK>
-```
+### Transaction History
 
-For example, if you want to mint NFTs on Avalanche Fuji by sending requests from Ethereum Sepolia, run:
+[Supply](https://testnet.snowtrace.io/tx/0xa94e231a9325229c8b6e40af8e837c15c7a80dca71c8c55860a1db6542d3bf5e?chainId=43113)
 
-```shell
-npx hardhat cross-chain-mint --source-minter <SOURCE_MINTER_ADDRESS> --source-blockchain ethereumSepolia --destination-blockchain avalancheFuji --destination-minter <DESTNATION_MINTER_ADDRESS> --pay-fees-in Native
-```
+[Leverage Supply](https://testnet.snowtrace.io/tx/0x05aab9f21759be13074376a8c1c15940fa3334776dd3611fdbb8fe09b6d7a3ae?chainId=43113)
 
-5. Once the CCIP message is finalized on the destination blockchain, you can query the MyNFTs balance of your account, using the `balance-of` task:
+[Withdraw](https://testnet.snowtrace.io/tx/0xa01f1548a019b074c158acd2b6620ead74ca295a9ddc1b1ea6f35a0cc27d80fb?chainId=43113)
 
-![ccip-explorer](./img/ccip-explorer.png)
+[Borrow](https://testnet.snowtrace.io/tx/0xa6c9cdeb388ca5b3bd2d163a6799efdb51b6d046e838687f696e488dc51bd658?chainId=43113)
 
-```shell
-npx hardhat balance-of
---my-nft <myNftContractAddress>
---blockchain <destinationBlockchain>
---owner <theAccountToCheckBalanceOf>
-```
+[Close(Repay)](https://testnet.snowtrace.io/tx/0x1df5eb93b38f2e1a2658fce76c6fa80ced65e0ae9acfb8a874c5e48bbec7c675?chainId=43113)
 
-For example, to verify that the new MyNFT was minted, type:
+[Close(Deleverage)](https://testnet.snowtrace.io/tx/0x6994bd4f2271b06377eb93546dcda6232fc32d5a15cc8f5aa6829d440161f4ee?chainId=43113)
 
-```shell
-npx hardhat balance-of --my-nft <MY_NFT_CONTRACT_ADDRESS> --blockchain avalancheFuji --owner <PUT_YOUR_EOA_ADDRESS_HERE>
-```
-
-Of course, you can see your newly minted NFT on popular NFT Marketplaces, like OpenSea for instance:
-
-![opensea](./img/opensea.png)
-
-6. You can always withdraw tokens for Chainlink CCIP fees from the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) smart contract using the `withdraw` task. Note that the `--token-address` flag is optional. If not provided, native coins will be withdrawn.
-
-```shell
-npx hardhat withdraw
---beneficiary <withdrawTo>
---blockchain <sourceMinterBlockchain>
---from <sourceMinterAddress>
---token-address <tokensToWithdraw> # Optional, if left empty native coins will be withdrawn
-```
-
-For example, to withdraw tokens previously sent for Chainlink CCIP fees, run:
-
-```shell
-npx hardhat withdraw --beneficiary <BENEFICIARY_ADDRESS> --blockchain ethereumSepolia --from <SOURCE_MINTER_ADDRESS>
-```
-
-or
-
-```shell
-npx hardhat withdraw --beneficiary <BENEFICIARY_ADDRESS> --blockchain ethereumSepolia --from <SOURCE_MINTER_ADDRESS> --token-address 0x779877A7B0D9E8603169DdbD7836e478b4624789
-```
-
-depending on whether you filled the [`SourceMinter.sol`](./contracts/cross-chain-nft-minter/SourceMinter.sol) contract with `Native` or `LINK` in step number 3.
+https://ccip.chain.link/address/0x1dd4bbac854806520cdee2fa3aac2db3c0bc22f1

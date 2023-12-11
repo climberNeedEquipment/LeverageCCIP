@@ -64,11 +64,6 @@ describe("Leverager", () => {
         LENDING_POOLS[network].AaveV3LendingPool
       );
 
-    // const aaveLendingContract: IPool = await IPool__factory.connect(
-    //   LENDING_POOLS[network].AaveV3LendingPool,
-    //   signer
-    // );
-
     const leverageAddress = await leverager.getAddress();
 
     console.log("Leverager deployed to:", leverageAddress);
@@ -76,21 +71,20 @@ describe("Leverager", () => {
     /// add destination chain propagator
     const propagator = await leverager.propagator();
 
-    await leverager.addDstChainPropagators(
+    await leverager.addDstChainPropagatorsLeveragers(
       [routerConfig[network].chainSelector],
-      [propagator]
+      [propagator],
+      [leverageAddress]
     );
 
     for (const [tokenName, tokenAddress] of Object.entries(
       MINTABLE_ERC20_TOKENS[network]
     )) {
+      /// take some tokens for the testings
       if (tokenName === "DAI" || tokenName === "WETH") {
         ERC20[tokenName] = MockERC20__factory.connect(tokenAddress, signer);
+        /// approve underlying assets to leverager
         await ERC20[tokenName].approve(leverageAddress, MAX_UINT256);
-        // await aaveLendingContract.setUserUseReserveAsCollateral(
-        //   tokenAddress,
-        //   true
-        // );
       }
     }
     console.log("Approve to Leverager(ERC20) is finished", leverageAddress);
@@ -100,6 +94,7 @@ describe("Leverager", () => {
     )) {
       if (tokenName === "DAI" || tokenName === "WETH") {
         aERC20[tokenName] = MockERC20__factory.connect(tokenAddress, signer);
+        /// approve A assets to leverager
         await aERC20[tokenName].approve(leverageAddress, MAX_UINT256);
       }
     }
@@ -111,6 +106,8 @@ describe("Leverager", () => {
     )) {
       if (tokenName === "DAI" || tokenName === "WETH") {
         debtERC20[tokenName] = MockERC20__factory.connect(tokenAddress, signer);
+        /// approve delegate debt assets to leverager
+
         await debtERC20[tokenName].approveDelegation(
           leverageAddress,
           MAX_UINT256
@@ -119,16 +116,16 @@ describe("Leverager", () => {
     }
     console.log("Approve to Leverager(debtToken) is finished", leverageAddress);
   });
-  it("supplies DAI using AaveV3", async () => {
+
+  it("supplies DAI to AaveV3", async () => {
     const token = "DAI";
     let flags = 0;
     flags += 1; // aave
-    flags += 2; // leverage
+    // either leverage or deleverage is fine
     // base
 
     let amount = parseUnits("1", "ether");
     const balance = await ERC20[token].balanceOf(signer.address);
-    console.log(balance, amount.toString());
 
     /// Vanilla Supply
 
@@ -141,26 +138,66 @@ describe("Leverager", () => {
     };
     leverager.connect(signer);
 
-    console.log(leverager.interface.encodeFunctionData("supply", [params]));
+    const tx = await leverager.supply(params);
+
+    const receipt = await tx.wait();
+  });
+
+  it("withdraw DAI from AaveV3", async () => {
+    /// Supply before withdrawal
+    const token = "DAI";
+    let flags = 0;
+    flags += 1; // aave
+    // either leverage or deleverage is fine
+    // base
+
+    let amount = parseUnits("1", "ether");
+
+    /// Vanilla Supply
+
+    const params: ILeverager.InputParamsStruct = {
+      asset: MINTABLE_ERC20_TOKENS[network][token],
+      counterAsset: AAVE_V3_A_TOKENS[network][token],
+      amount: amount,
+      flags: flags,
+      data: "0x",
+    };
+    leverager.connect(signer);
 
     const tx = await leverager.supply(params);
 
     const receipt = await tx.wait();
 
     /// Withdraw
-    // amount = await aERC20[token].balanceOf(signer.address);
-    // flags = 0;
-    // flags += 1; // aave
-    // // leverage
-    // flags += 4; // base
+    amount = await aERC20[token].balanceOf(signer.address);
+    flags = 0;
+    flags += 1; // aave
 
-    // const tx2 = await leverager.withdraw(params);
-    // console.log(leverager.interface.encodeFunctionData("withdraw", [params]));
-    // const receipt2 = await tx2.wait();
-    // console.log("receipt2:", receipt2);
+    const tx2 = await leverager.withdraw(params);
+    const receipt2 = await tx2.wait();
+  });
+  it("borrow DAI from AaveV3", async () => {
+    /// Supply before borrow
+    const token = "DAI";
+    let flags = 0;
+    flags += 1; // aave
+    // either leverage or deleverage is fine
+    // base
 
-    // expect(await ERC20[token].balanceOf(signer.address)).to.equal(balance);
+    let amount = parseUnits("1", "ether");
 
+    /// Vanilla Supply
+
+    const params: ILeverager.InputParamsStruct = {
+      asset: MINTABLE_ERC20_TOKENS[network][token],
+      counterAsset: AAVE_V3_A_TOKENS[network][token],
+      amount: amount,
+      flags: flags,
+      data: "0x",
+    };
+    leverager.connect(signer);
+
+    const tx = await leverager.supply(params);
     /// Borrow
     amount = parseUnits("0.5", "ether");
     params.amount = amount;
@@ -171,8 +208,50 @@ describe("Leverager", () => {
       "before debt",
       await debtERC20[token].balanceOf(signer.address)
     );
-    const tx3 = await leverager.borrow(params);
-    const receipt3 = await tx3.wait();
+    const tx2 = await leverager.borrow(params);
+    const receipt2 = await tx2.wait();
+
+    console.log("after ", await ERC20[token].balanceOf(signer.address));
+    console.log(
+      "after debt ",
+      await debtERC20[token].balanceOf(signer.address)
+    );
+  });
+
+  it("Repay DAI from AaveV3", async () => {
+    /// Supply before withdrawal
+    const token = "DAI";
+    let flags = 0;
+    flags += 1; // aave
+    // either leverage or deleverage is fine
+    // base
+
+    let amount = parseUnits("1", "ether");
+
+    /// Vanilla Supply
+
+    const params: ILeverager.InputParamsStruct = {
+      asset: MINTABLE_ERC20_TOKENS[network][token],
+      counterAsset: AAVE_V3_A_TOKENS[network][token],
+      amount: amount,
+      flags: flags,
+      data: "0x",
+    };
+    leverager.connect(signer);
+
+    const tx = await leverager.supply(params);
+    /// Borrow
+    amount = parseUnits("0.5", "ether");
+    params.amount = amount;
+    params.counterAsset = AAVE_V3_DEBT_TOKENS[network][token];
+
+    console.log("before ", await ERC20[token].balanceOf(signer.address));
+    console.log(
+      "before debt",
+      await debtERC20[token].balanceOf(signer.address)
+    );
+    const tx2 = await leverager.borrow(params);
+    const receipt2 = await tx2.wait();
 
     console.log("after ", await ERC20[token].balanceOf(signer.address));
     console.log(
@@ -188,28 +267,22 @@ describe("Leverager", () => {
       "before debt",
       await debtERC20[token].balanceOf(signer.address)
     );
-    const tx4 = await leverager.close(params);
-    const receipt4 = await tx4.wait();
+    const tx3 = await leverager.close(params);
+    const receipt4 = await tx3.wait();
     console.log(
       "after debt ",
       await debtERC20[token].balanceOf(signer.address)
     );
-
-    const repayFlashloanData = new AbiCoder().encode(
-      ["address", "address", "uint256", "bytes"],
-      [
-        MINTABLE_ERC20_TOKENS[network][token],
-        AAVE_V3_DEBT_TOKENS[network][token],
-        parseUnits("2", "ether"),
-        "0x",
-      ]
-    );
-
-    flags = 0;
+  });
+  it("Leverage supply DAI to AaveV3", async () => {
+    const token = "DAI";
+    let flags = 0;
     flags += 1; // aave
     flags += 2; // leverage
 
-    /// Leverage Supply
+    let amount = parseUnits("1", "ether");
+
+    /// Flashloan data
     const supplyFlashloanData = new AbiCoder().encode(
       ["address", "address", "uint256", "bytes"],
       [
@@ -219,19 +292,63 @@ describe("Leverager", () => {
         "0x",
       ]
     );
-    params.data = supplyFlashloanData;
-    const tx5 = await leverager.supply(params);
-    const receipt5 = await tx5.wait();
+
+    /// Leverage Supply
+
+    const params: ILeverager.InputParamsStruct = {
+      asset: MINTABLE_ERC20_TOKENS[network][token],
+      counterAsset: AAVE_V3_A_TOKENS[network][token],
+      amount: amount,
+      flags: flags,
+      data: supplyFlashloanData,
+    };
+    leverager.connect(signer);
+
+    /// Leverage Supply
+
+    const tx = await leverager.supply(params);
+    const receipt = await tx.wait();
+  });
+
+  it("Deleverage DAI using flashloan to AaveV3", async () => {
+    const token = "DAI";
+    let flags = 0;
+    flags += 1; // aave
+    flags += 2; // leverage
+
+    let amount = parseUnits("1", "ether");
+
+    /// Flashloan data
+    const supplyFlashloanData = new AbiCoder().encode(
+      ["address", "address", "uint256", "bytes"],
+      [
+        MINTABLE_ERC20_TOKENS[network][token],
+        AAVE_V3_DEBT_TOKENS[network][token],
+        parseUnits("2", "ether"),
+        "0x",
+      ]
+    );
+
+    /// Leverage Supply
+
+    const params: ILeverager.InputParamsStruct = {
+      asset: MINTABLE_ERC20_TOKENS[network][token],
+      counterAsset: AAVE_V3_A_TOKENS[network][token],
+      amount: amount,
+      flags: flags,
+      data: supplyFlashloanData,
+    };
+    leverager.connect(signer);
+
+    /// Leverage Supply
+
+    const tx = await leverager.supply(params);
+    const receipt = await tx.wait();
 
     // deleverage
 
-    // inputParams.data = closeFlashloanData;
-    // closeFlashloanData = flashloan params + chainlink data
-    // chainlink data= abi.encode("uint64[]", "bytes[]" [destination Selectors, msgsData])
-    // msgs data = destination chain's closeFlashloanData
-
     flags = 0;
-    flags += 1;
+    flags += 1; // aave
     const closeFlashloanData = new AbiCoder().encode(
       ["address", "address", "uint256", "bytes"],
       [
@@ -247,107 +364,100 @@ describe("Leverager", () => {
     params.flags = flags;
 
     await leverager.close(params);
-
-    // const propagator = await leverager.propagator();
-
-    // const chainlinkData = new AbiCoder().encode(
-    //   ["address", "address", "address", "uint8", "bytes"],
-    //   [
-    //     signer.address,
-    //     MINTABLE_ERC20_TOKENS[network][token],
-    //     AAVE_V3_A_TOKENS[network][token],
-    //     flags,
-    //     closeFlashloanData,
-    //   ]
-    // );
-    // const clientMsg: Client.Any2EVMMessageStruct = {
-    //   messageId:
-    //     "0x84bff367c056ff4fd56701c6344e562d924a68688bc280c8b13b47f299472a3f",
-    //   sourceChainSelector: routerConfig[network].chainSelector,
-    //   sender: new AbiCoder().encode(["address"], [propagator]),
-    //   data: chainlinkData,
-    //   destTokenAmounts: [],
-    // };
-
-    // /// donate ethers to router for making fake tx
-
-    // await hre.network.provider.send("hardhat_setBalance", [
-    //   routerConfig[network].address,
-    //   "0x" + hre.ethers.parseEther("10").toString(16),
-    // ]);
-
-    // await hre.network.provider.request({
-    //   method: "hardhat_impersonateAccount",
-    //   params: [routerConfig[network].address],
-    // });
-    // const routerSigner = await hre.ethers.getSigner(
-    //   routerConfig[network].address
-    // );
-
-    // const leverageCallInstance = Leverager__factory.connect(
-    //   await leverager.getAddress(),
-    //   routerSigner
-    // );
-    // await leverageCallInstance.ccipReceive(clientMsg);
-
-    // params.amount = "0";
-
-    // params.data = closeFlashloanData;
-    // const tx6 = await leverager.close(params);
-
-    // const receipt6 = await tx6.wait();
-
-    expect(await debtERC20[token].balanceOf(signer.address)).to.equal(
-      parseUnits("1", "ether")
-    );
-    expect(await aERC20[token].balanceOf(signer.address)).to.equal(
-      parseUnits("2", "ether")
-    );
-    expect(await ERC20[token].balanceOf(signer.address)).to.equal(balance);
   });
 
-  // it("supplies ETH using AaveV3", async () => {
-  //   const token = "WETH";
-  //   let flags = 0;
-  //   flags += 1; // aave
-  //   flags += 2; // leverage
-  //   // base
+  it("Get message from CCIP and close the position of AaveV3", async () => {
+    const token = "DAI";
+    let flags = 0;
+    flags += 1; // aave
+    flags += 2; // leverage
 
-  //   let amount = parseUnits("1", "gwei");
-  //   const ethBalance = await hre.ethers.provider.getBalance(signer.address);
-  //   const balance = await ERC20[token].balanceOf(signer.address);
-  //   console.log(balance, amount.toString());
+    let amount = parseUnits("1", "ether");
 
-  //   const params: ILeverager.InputParamsStruct = {
-  //     asset: ETH_EE_ADDRESS,
-  //     counterAsset: AAVE_V3_A_TOKENS[network][token],
-  //     amount: amount,
-  //     flags: flags,
-  //     data: "0x",
-  //   };
-  //   leverager.connect(signer);
-  //   const tx = await leverager.supply(params, { value: amount });
-  //   const receipt = await tx.wait();
+    /// Flashloan data
+    const supplyFlashloanData = new AbiCoder().encode(
+      ["address", "address", "uint256", "bytes"],
+      [
+        MINTABLE_ERC20_TOKENS[network][token],
+        AAVE_V3_DEBT_TOKENS[network][token],
+        parseUnits("2", "ether"),
+        "0x",
+      ]
+    );
 
-  //   console.log("receipt:", receipt);
+    /// Leverage Supply
 
-  //   amount = await aERC20[token].balanceOf(signer.address);
-  //   flags = 0;
-  //   flags += 1; // aave
-  //   // leverage
-  //   flags += 4; // base
+    const params: ILeverager.InputParamsStruct = {
+      asset: MINTABLE_ERC20_TOKENS[network][token],
+      counterAsset: AAVE_V3_A_TOKENS[network][token],
+      amount: amount,
+      flags: flags,
+      data: supplyFlashloanData,
+    };
+    leverager.connect(signer);
 
-  //   console.log("aWETH amount" + amount.toString());
-  //   params.amount = amount;
+    /// Leverage Supply
 
-  //   const tx2 = await leverager.withdraw(params);
-  //   const receipt2 = await tx2.wait();
-  //   console.log("receipt2:", receipt2);
-  //   console.log(
-  //     "ethBalance:",
-  //     ethBalance,
-  //     await hre.ethers.provider.getBalance(signer.address)
-  //   );
-  //   expect(await ERC20[token].balanceOf(signer.address)).to.equal(balance);
-  // });
+    const tx = await leverager.supply(params);
+    const receipt = await tx.wait();
+
+    const propagator = await leverager.propagator();
+    const closeFlashloanData = new AbiCoder().encode(
+      ["address", "address", "uint256", "bytes"],
+      [
+        MINTABLE_ERC20_TOKENS[network][token],
+        AAVE_V3_DEBT_TOKENS[network][token],
+        parseUnits("1", "ether"),
+        "0x", // chainlink data
+      ]
+    );
+
+    const chainlinkData = new AbiCoder().encode(
+      ["address", "address", "address", "uint8", "bytes"],
+      [
+        signer.address,
+        MINTABLE_ERC20_TOKENS[network][token],
+        AAVE_V3_A_TOKENS[network][token],
+        flags,
+        closeFlashloanData,
+      ]
+    );
+    const clientMsg: Client.Any2EVMMessageStruct = {
+      messageId:
+        "0x84bff367c056ff4fd56701c6344e562d924a68688bc280c8b13b47f299472a3f",
+      sourceChainSelector: routerConfig[network].chainSelector,
+      sender: new AbiCoder().encode(["address"], [propagator]),
+      data: chainlinkData,
+      destTokenAmounts: [],
+    };
+
+    /// donate ethers to router for making fake tx
+
+    await hre.network.provider.send("hardhat_setBalance", [
+      routerConfig[network].address,
+      "0x" + hre.ethers.parseEther("10").toString(16),
+    ]);
+
+    /// impersonate router to send message from chainlink router directly to leverager
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [routerConfig[network].address],
+    });
+    const routerSigner = await hre.ethers.getSigner(
+      routerConfig[network].address
+    );
+
+    const leverageCallInstance = Leverager__factory.connect(
+      await leverager.getAddress(),
+      routerSigner
+    );
+    await leverageCallInstance.ccipReceive(clientMsg);
+
+    params.amount = "0";
+
+    params.data = closeFlashloanData;
+    const tx2 = await leverager.close(params);
+
+    const receipt2 = await tx2.wait();
+  });
 });

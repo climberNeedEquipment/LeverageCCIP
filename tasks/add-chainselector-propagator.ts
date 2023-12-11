@@ -30,6 +30,7 @@ task(
       leveragerAddress[hre.network.name],
       signer
     );
+    console.log({ chainSelectors, propagators, leveragers });
 
     await leverager.addDstChainPropagatorsLeveragers(
       chainSelectors,
