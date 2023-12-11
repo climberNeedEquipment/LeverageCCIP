@@ -263,5 +263,3 @@ There are mainly 7 functions in the leverager contract. To enable the functions,
 [Close(Repay)](https://testnet.snowtrace.io/tx/0x1df5eb93b38f2e1a2658fce76c6fa80ced65e0ae9acfb8a874c5e48bbec7c675?chainId=43113)
 
 [Close(Deleverage)](https://testnet.snowtrace.io/tx/0x6994bd4f2271b06377eb93546dcda6232fc32d5a15cc8f5aa6829d440161f4ee?chainId=43113)
-
-https://ccip.chain.link/address/0x1dd4bbac854806520cdee2fa3aac2db3c0bc22f1
